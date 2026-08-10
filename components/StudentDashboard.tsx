@@ -1,15 +1,35 @@
 import PortalShell from "./PortalShell";
 import { createClient } from "@/lib/supabase/server";
+import { registerForTournament } from "@/app/portal/tournaments/actions";
+
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Beirut",
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(value));
+}
 
 export default async function StudentDashboard({ profile }: { profile: any }) {
   const supabase = await createClient();
 
-  const { data: enrollment } = await supabase
-    .from("student_enrollments")
-    .select("class_id, class:classes(id, name, branch:branches(name), level:levels(name))")
-    .eq("student_id", profile.id)
-    .eq("active", true)
-    .maybeSingle();
+  const [{ data: enrollment }, { data: tournaments }, { data: registrations }] = await Promise.all([
+    supabase
+      .from("student_enrollments")
+      .select("class_id, class:classes(id, name, branch:branches(name), level:levels(name))")
+      .eq("student_id", profile.id)
+      .eq("active", true)
+      .maybeSingle(),
+    supabase
+      .from("tournaments")
+      .select("id, title, venue, starts_at, registration_deadline, description, open_for_registration, branch:branches(name)")
+      .gte("starts_at", new Date().toISOString())
+      .order("starts_at", { ascending: true }),
+    supabase
+      .from("tournament_registrations")
+      .select("tournament_id, status, registered_at")
+      .eq("student_id", profile.id),
+  ]);
 
   let coaches: any[] = [];
   let homework: any[] = [];
@@ -33,6 +53,9 @@ export default async function StudentDashboard({ profile }: { profile: any }) {
   }
 
   const classInfo: any = enrollment?.class;
+  const registrationByTournament = new Map<string, any>();
+  for (const registration of registrations || []) registrationByTournament.set(registration.tournament_id, registration);
+  const now = new Date();
 
   return (
     <PortalShell title={`Welcome, ${profile.full_name}`} role="Student">
@@ -81,7 +104,49 @@ export default async function StudentDashboard({ profile }: { profile: any }) {
 
         <div className="card span12">
           <h2>Upcoming Tournaments</h2>
-          <p className="small">Tournament registration is the next module to activate. Once enabled, open events and your registration status will appear here.</p>
+          {!tournaments?.length ? (
+            <p className="small">No upcoming tournaments yet.</p>
+          ) : (
+            <div className="list">
+              {tournaments.map((tournament: any) => {
+                const registration = registrationByTournament.get(tournament.id);
+                const deadlinePassed = tournament.registration_deadline
+                  ? new Date(tournament.registration_deadline) < now
+                  : false;
+                const canRegister = tournament.open_for_registration && !deadlinePassed && !registration;
+
+                return (
+                  <div className="card" key={tournament.id} style={{ boxShadow: "none" }}>
+                    <div className="row">
+                      <div>
+                        <h3 style={{ marginBottom: 6 }}>{tournament.title}</h3>
+                        <div className="small">
+                          {formatDate(tournament.starts_at)}
+                          {tournament.branch?.name ? ` · ${tournament.branch.name}` : ""}
+                          {tournament.venue ? ` · ${tournament.venue}` : ""}
+                        </div>
+                        {tournament.registration_deadline ? (
+                          <div className="small" style={{ marginTop: 4 }}>Register by {formatDate(tournament.registration_deadline)}</div>
+                        ) : null}
+                      </div>
+
+                      {registration ? (
+                        <span className="pill">{registration.status}</span>
+                      ) : canRegister ? (
+                        <form action={registerForTournament}>
+                          <input type="hidden" name="tournament_id" value={tournament.id} />
+                          <button className="btn" type="submit">Register</button>
+                        </form>
+                      ) : (
+                        <span className="pill">Registration closed</span>
+                      )}
+                    </div>
+                    {tournament.description ? <p>{tournament.description}</p> : null}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
     </PortalShell>
