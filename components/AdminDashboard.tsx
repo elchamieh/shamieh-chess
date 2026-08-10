@@ -4,14 +4,16 @@ import { createClient } from "@/lib/supabase/server";
 
 export default async function AdminDashboard({ profile }: { profile: any }) {
   const supabase = await createClient();
-  const [coachesResult, studentsResult, classesResult] = await Promise.all([
-    supabase.from("profiles").select("id", { count: "exact", head: true }).eq("role", "coach"),
-    supabase.from("profiles").select("id", { count: "exact", head: true }).eq("role", "student"),
+  const [coachesResult, studentsResult, pendingResult, classesResult] = await Promise.all([
+    supabase.from("profiles").select("id", { count: "exact", head: true }).eq("role", "coach").eq("approved", true),
+    supabase.from("profiles").select("id", { count: "exact", head: true }).eq("role", "student").eq("approved", true),
+    supabase.from("profiles").select("id", { count: "exact", head: true }).eq("role", "student").eq("approved", false),
     supabase.from("classes").select("id", { count: "exact", head: true }).eq("active", true),
   ]);
 
   const coachCount = coachesResult.count || 0;
   const studentCount = studentsResult.count || 0;
+  const pendingCount = pendingResult.count || 0;
   const classCount = classesResult.count || 0;
 
   return (
@@ -28,9 +30,9 @@ export default async function AdminDashboard({ profile }: { profile: any }) {
           <div>{coachCount} of 6 planned accounts created</div>
         </div>
         <div className="card span4">
-          <div className="small">Students</div>
+          <div className="small">Approved students</div>
           <div className="kpi">{studentCount}</div>
-          <div>Active academy accounts</div>
+          <div>{pendingCount ? `${pendingCount} registration${pendingCount === 1 ? "" : "s"} awaiting approval` : "No registrations awaiting approval"}</div>
         </div>
 
         <div className="card span8">
@@ -39,9 +41,9 @@ export default async function AdminDashboard({ profile }: { profile: any }) {
             <div className="row">
               <div>
                 <b>Students</b>
-                <div className="small">Create student accounts and control class placement</div>
+                <div className="small">Approve self-registrations, create accounts manually, and control class placement</div>
               </div>
-              <Link className="btn" href="/portal/admin/students">Manage</Link>
+              <Link className="btn" href="/portal/admin/students">Manage{pendingCount ? ` (${pendingCount})` : ""}</Link>
             </div>
             <div className="row">
               <div>
@@ -68,9 +70,9 @@ export default async function AdminDashboard({ profile }: { profile: any }) {
         </div>
 
         <div className="card span4">
-          <h2>Next setup step</h2>
-          <p>You can keep adding coaches at any time. For now, start creating student accounts and place each student into the correct class.</p>
-          <Link className="btn" href="/portal/admin/students">Set up students</Link>
+          <h2>Student registration</h2>
+          <p>Students can now submit their own registration. They cannot access the academy platform until you approve them and choose their class.</p>
+          <Link className="btn" href="/portal/admin/students">Review students</Link>
         </div>
       </div>
     </PortalShell>
