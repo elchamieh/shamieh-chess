@@ -40,10 +40,10 @@ export default function AdminDashboard({ profile }: { profile: any }) {
             </div>
             <div className="row">
               <div>
-                <b>Coach assignments</b>
-                <div className="small">Control which classes each coach can access</div>
+                <b>Coaches & class access</b>
+                <div className="small">Create coach accounts and control which classes each coach can access</div>
               </div>
-              <button className="btn secondary" disabled>Coming next</button>
+              <Link className="btn" href="/portal/admin/coaches">Manage</Link>
             </div>
             <div className="row">
               <div>
@@ -57,8 +57,8 @@ export default function AdminDashboard({ profile }: { profile: any }) {
 
         <div className="card span4">
           <h2>Next setup step</h2>
-          <p>Create the actual Saida and Beirut class groups first. After that we will add coaches and students and assign them to those classes.</p>
-          <Link className="btn" href="/portal/admin/classes">Set up classes</Link>
+          <p>Your classes are ready. Create the six coach accounts and assign each coach only to the classes they teach.</p>
+          <Link className="btn" href="/portal/admin/coaches">Set up coaches</Link>
         </div>
       </div>
     </PortalShell>
