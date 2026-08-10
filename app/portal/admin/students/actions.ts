@@ -11,11 +11,11 @@ async function requireAdmin() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role")
+    .select("role, approved")
     .eq("id", user.id)
     .single();
 
-  if (profile?.role !== "admin") redirect("/portal");
+  if (profile?.role !== "admin" || profile?.approved !== true) redirect("/portal");
   return supabase;
 }
 
@@ -40,6 +40,61 @@ export async function createStudent(formData: FormData) {
   redirect("/portal/admin/students?created=1");
 }
 
+export async function approveStudent(formData: FormData) {
+  const supabase = await requireAdmin();
+  const student_id = String(formData.get("student_id") || "");
+  const class_id = String(formData.get("class_id") || "");
+
+  if (!student_id || !class_id) {
+    redirect("/portal/admin/students?error=Student%20and%20class%20are%20required");
+  }
+
+  const [{ data: student }, { data: targetClass }] = await Promise.all([
+    supabase.from("profiles").select("id, role, approved").eq("id", student_id).single(),
+    supabase.from("classes").select("id").eq("id", class_id).eq("active", true).single(),
+  ]);
+
+  if (!student || student.role !== "student" || student.approved || !targetClass) {
+    redirect("/portal/admin/students?error=Invalid%20pending%20registration%20or%20class");
+  }
+
+  const { data: existingEnrollment } = await supabase
+    .from("student_enrollments")
+    .select("id")
+    .eq("student_id", student_id)
+    .eq("active", true)
+    .maybeSingle();
+
+  if (existingEnrollment) {
+    redirect("/portal/admin/students?error=Pending%20student%20already%20has%20an%20active%20class");
+  }
+
+  const { data: enrollment, error: enrollmentError } = await supabase
+    .from("student_enrollments")
+    .insert({ student_id, class_id, active: true })
+    .select("id")
+    .single();
+
+  if (enrollmentError || !enrollment) {
+    redirect(`/portal/admin/students?error=${encodeURIComponent(enrollmentError?.message || "Could not place student")}`);
+  }
+
+  const { error: approvalError } = await supabase
+    .from("profiles")
+    .update({ approved: true, approved_at: new Date().toISOString() })
+    .eq("id", student_id)
+    .eq("approved", false);
+
+  if (approvalError) {
+    await supabase.from("student_enrollments").delete().eq("id", enrollment.id);
+    redirect(`/portal/admin/students?error=${encodeURIComponent(approvalError.message)}`);
+  }
+
+  revalidatePath("/portal/admin/students");
+  revalidatePath("/portal");
+  redirect("/portal/admin/students?approved=1");
+}
+
 export async function moveStudent(formData: FormData) {
   const supabase = await requireAdmin();
   const student_id = String(formData.get("student_id") || "");
@@ -47,7 +102,7 @@ export async function moveStudent(formData: FormData) {
   if (!student_id || !class_id) return;
 
   const [{ data: student }, { data: targetClass }] = await Promise.all([
-    supabase.from("profiles").select("id").eq("id", student_id).eq("role", "student").single(),
+    supabase.from("profiles").select("id").eq("id", student_id).eq("role", "student").eq("approved", true).single(),
     supabase.from("classes").select("id").eq("id", class_id).eq("active", true).single(),
   ]);
 
@@ -62,9 +117,7 @@ export async function moveStudent(formData: FormData) {
     .eq("active", true)
     .maybeSingle();
 
-  if (current?.class_id === class_id) {
-    redirect("/portal/admin/students");
-  }
+  if (current?.class_id === class_id) redirect("/portal/admin/students");
 
   if (current) {
     const { error: deactivateError } = await supabase
@@ -72,9 +125,7 @@ export async function moveStudent(formData: FormData) {
       .update({ active: false })
       .eq("id", current.id);
 
-    if (deactivateError) {
-      redirect(`/portal/admin/students?error=${encodeURIComponent(deactivateError.message)}`);
-    }
+    if (deactivateError) redirect(`/portal/admin/students?error=${encodeURIComponent(deactivateError.message)}`);
   }
 
   const { error: insertError } = await supabase
@@ -82,9 +133,7 @@ export async function moveStudent(formData: FormData) {
     .insert({ student_id, class_id, active: true });
 
   if (insertError) {
-    if (current) {
-      await supabase.from("student_enrollments").update({ active: true }).eq("id", current.id);
-    }
+    if (current) await supabase.from("student_enrollments").update({ active: true }).eq("id", current.id);
     redirect(`/portal/admin/students?error=${encodeURIComponent(insertError.message)}`);
   }
 
