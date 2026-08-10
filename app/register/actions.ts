@@ -16,7 +16,10 @@ export async function registerStudent(formData: FormData) {
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
-    options: { data: { full_name } },
+    options: {
+      data: { full_name },
+      emailRedirectTo: "https://shamieh-chess.vercel.app/login",
+    },
   });
 
   if (error) {
