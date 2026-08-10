@@ -62,17 +62,17 @@ export default async function AdminDashboard({ profile }: { profile: any }) {
             <div className="row">
               <div>
                 <b>Tournaments</b>
-                <div className="small">Create events and view registrations</div>
+                <div className="small">Create events, open or close registration, and view student registrations</div>
               </div>
-              <button className="btn secondary" disabled>Coming later</button>
+              <Link className="btn" href="/portal/admin/tournaments">Manage</Link>
             </div>
           </div>
         </div>
 
         <div className="card span4">
-          <h2>Student registration</h2>
-          <p>Students can now submit their own registration. They cannot access the academy platform until you approve them and choose their class.</p>
-          <Link className="btn" href="/portal/admin/students">Review students</Link>
+          <h2>Tournaments</h2>
+          <p>Create the next academy event and students will be able to register from their own dashboard.</p>
+          <Link className="btn" href="/portal/admin/tournaments">Create tournament</Link>
         </div>
       </div>
     </PortalShell>
