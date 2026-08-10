@@ -38,33 +38,9 @@ Initial MVP foundation for:
 1. Create a Supabase project.
 2. Run `supabase/migrations/001_initial_schema.sql` in Supabase SQL Editor.
 3. Copy `.env.example` to `.env.local`.
-4. Add:
-   - `NEXT_PUBLIC_SUPABASE_URL`
-   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-5. Install and run:
-   ```bash
-   npm install
-   npm run dev
-   ```
+4. Add `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
+5. Run `npm install` and `npm run dev`.
 6. Deploy to Vercel.
-7. In Supabase Auth, create the first user.
-8. Change that profile's role to `admin` in the `profiles` table.
+7. Create the first Supabase Auth user and change its profile role to `admin`.
 
-## Important security design
-
-Permissions are implemented using Supabase Row Level Security (RLS), not only UI visibility.
-
-- Admin: all academy data.
-- Coach: only assigned classes and students enrolled in them.
-- Student: only own enrollment/class homework and own tournament registrations.
-
-## Next implementation step
-
-Build real CRUD screens:
-- `/portal/students`
-- `/portal/classes`
-- `/portal/coaches`
-- `/portal/homework`
-- `/portal/tournaments`
-
-The current dashboards are the v0.1 shell and access-control foundation.
+Permissions are enforced with Supabase Row Level Security (RLS).
