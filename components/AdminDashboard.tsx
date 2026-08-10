@@ -1,24 +1,36 @@
 import Link from "next/link";
 import PortalShell from "./PortalShell";
+import { createClient } from "@/lib/supabase/server";
 
-export default function AdminDashboard({ profile }: { profile: any }) {
+export default async function AdminDashboard({ profile }: { profile: any }) {
+  const supabase = await createClient();
+  const [coachesResult, studentsResult, classesResult] = await Promise.all([
+    supabase.from("profiles").select("id", { count: "exact", head: true }).eq("role", "coach"),
+    supabase.from("profiles").select("id", { count: "exact", head: true }).eq("role", "student"),
+    supabase.from("classes").select("id", { count: "exact", head: true }).eq("active", true),
+  ]);
+
+  const coachCount = coachesResult.count || 0;
+  const studentCount = studentsResult.count || 0;
+  const classCount = classesResult.count || 0;
+
   return (
     <PortalShell title={`Welcome, ${profile.full_name}`} role="Admin">
       <div className="grid">
         <div className="card span4">
-          <div className="small">Branches</div>
-          <div className="kpi">2</div>
-          <div>Saida & Beirut</div>
-        </div>
-        <div className="card span4">
-          <div className="small">Levels</div>
-          <div className="kpi">4</div>
-          <div>Starters → Advanced</div>
+          <div className="small">Active classes</div>
+          <div className="kpi">{classCount}</div>
+          <div>Across Saida & Beirut</div>
         </div>
         <div className="card span4">
           <div className="small">Coaches</div>
-          <div className="kpi">6</div>
-          <div>Planned academy coaching team</div>
+          <div className="kpi">{coachCount}</div>
+          <div>{coachCount} of 6 planned accounts created</div>
+        </div>
+        <div className="card span4">
+          <div className="small">Students</div>
+          <div className="kpi">{studentCount}</div>
+          <div>Active academy accounts</div>
         </div>
 
         <div className="card span8">
@@ -27,9 +39,9 @@ export default function AdminDashboard({ profile }: { profile: any }) {
             <div className="row">
               <div>
                 <b>Students</b>
-                <div className="small">Create students and place them in classes</div>
+                <div className="small">Create student accounts and control class placement</div>
               </div>
-              <button className="btn secondary" disabled>Coming next</button>
+              <Link className="btn" href="/portal/admin/students">Manage</Link>
             </div>
             <div className="row">
               <div>
@@ -50,15 +62,15 @@ export default function AdminDashboard({ profile }: { profile: any }) {
                 <b>Tournaments</b>
                 <div className="small">Create events and view registrations</div>
               </div>
-              <button className="btn secondary" disabled>Coming next</button>
+              <button className="btn secondary" disabled>Coming later</button>
             </div>
           </div>
         </div>
 
         <div className="card span4">
           <h2>Next setup step</h2>
-          <p>Your classes are ready. Create the six coach accounts and assign each coach only to the classes they teach.</p>
-          <Link className="btn" href="/portal/admin/coaches">Set up coaches</Link>
+          <p>You can keep adding coaches at any time. For now, start creating student accounts and place each student into the correct class.</p>
+          <Link className="btn" href="/portal/admin/students">Set up students</Link>
         </div>
       </div>
     </PortalShell>
