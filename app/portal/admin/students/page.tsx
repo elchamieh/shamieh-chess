@@ -2,9 +2,13 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import PortalShell from "@/components/PortalShell";
 import { createClient } from "@/lib/supabase/server";
-import { createStudent, moveStudent } from "./actions";
+import { approveStudent, createStudent, moveStudent } from "./actions";
 
-export default async function AdminStudentsPage({ searchParams }: { searchParams: Promise<{ created?: string; moved?: string; error?: string }> }) {
+export default async function AdminStudentsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ created?: string; moved?: string; approved?: string; error?: string }>;
+}) {
   const params = await searchParams;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -12,13 +16,14 @@ export default async function AdminStudentsPage({ searchParams }: { searchParams
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("full_name, role")
+    .select("full_name, role, approved")
     .eq("id", user.id)
     .single();
-  if (profile?.role !== "admin") redirect("/portal");
+  if (profile?.role !== "admin" || profile?.approved !== true) redirect("/portal");
 
-  const [{ data: students }, { data: classes }, { data: enrollments }] = await Promise.all([
-    supabase.from("profiles").select("id, full_name").eq("role", "student").order("full_name"),
+  const [studentsResult, pendingResult, classesResult, enrollmentsResult] = await Promise.all([
+    supabase.from("profiles").select("id, full_name").eq("role", "student").eq("approved", true).order("full_name"),
+    supabase.from("profiles").select("id, full_name, created_at").eq("role", "student").eq("approved", false).order("created_at"),
     supabase
       .from("classes")
       .select("id, name, branch:branches(name), level:levels(name, sort_order)")
@@ -30,8 +35,13 @@ export default async function AdminStudentsPage({ searchParams }: { searchParams
       .eq("active", true),
   ]);
 
+  const students = studentsResult.data || [];
+  const pendingStudents = pendingResult.data || [];
+  const classes = classesResult.data || [];
+  const enrollments = enrollmentsResult.data || [];
+
   const enrollmentByStudent = new Map<string, any>();
-  for (const enrollment of enrollments || []) enrollmentByStudent.set(enrollment.student_id, enrollment);
+  for (const enrollment of enrollments) enrollmentByStudent.set(enrollment.student_id, enrollment);
 
   return (
     <PortalShell title="Students" role="Admin">
@@ -40,13 +50,52 @@ export default async function AdminStudentsPage({ searchParams }: { searchParams
       </div>
 
       {params.created ? <div className="card" style={{ marginBottom: 18 }}><b>Student created and placed in class.</b></div> : null}
+      {params.approved ? <div className="card" style={{ marginBottom: 18 }}><b>Registration approved and student placed in class.</b></div> : null}
       {params.moved ? <div className="card" style={{ marginBottom: 18 }}><b>Student class updated.</b></div> : null}
       {params.error ? <div className="card" style={{ marginBottom: 18 }}><b>Could not complete action:</b> {decodeURIComponent(params.error)}</div> : null}
 
+      <div className="card" style={{ marginBottom: 18 }}>
+        <div className="row">
+          <div>
+            <h2 style={{ marginBottom: 4 }}>Pending registrations</h2>
+            <div className="small">Students who register themselves appear here. Approval is final only when you choose their class and approve them.</div>
+          </div>
+          <span className="pill">{pendingStudents.length} pending</span>
+        </div>
+
+        {!pendingStudents.length ? (
+          <p className="small">No pending student registrations.</p>
+        ) : (
+          <div className="list">
+            {pendingStudents.map((student: any) => (
+              <div className="card" key={student.id} style={{ boxShadow: "none" }}>
+                <div>
+                  <h3 style={{ marginBottom: 6 }}>{student.full_name}</h3>
+                  <div className="small">Registered {new Date(student.created_at).toLocaleDateString("en-GB")}</div>
+                </div>
+                <form action={approveStudent} style={{ marginTop: 12, display: "flex", gap: 8, alignItems: "end", flexWrap: "wrap" }}>
+                  <input type="hidden" name="student_id" value={student.id} />
+                  <label className="field" style={{ margin: 0, flex: 1, minWidth: 240 }}>
+                    <span>Approve into class</span>
+                    <select className="input" name="class_id" required defaultValue="">
+                      <option value="" disabled>Select class</option>
+                      {classes.map((item: any) => (
+                        <option key={item.id} value={item.id}>{item.branch?.name} · {item.level?.name} · {item.name}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <button className="btn" type="submit">Approve & place</button>
+                </form>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       <div className="grid">
         <div className="card span4">
-          <h2>Create student</h2>
-          <p className="small">The admin creates the login and places the student directly into one active class.</p>
+          <h2>Create student manually</h2>
+          <p className="small">You can still create a student yourself when needed. Admin-created students are approved immediately.</p>
           <form action={createStudent}>
             <label className="field">
               <span>Full name</span>
@@ -64,7 +113,7 @@ export default async function AdminStudentsPage({ searchParams }: { searchParams
               <span>Class</span>
               <select className="input" name="class_id" required defaultValue="">
                 <option value="" disabled>Select class</option>
-                {(classes || []).map((item: any) => (
+                {classes.map((item: any) => (
                   <option key={item.id} value={item.id}>{item.branch?.name} · {item.level?.name} · {item.name}</option>
                 ))}
               </select>
@@ -74,14 +123,14 @@ export default async function AdminStudentsPage({ searchParams }: { searchParams
         </div>
 
         <div className="card span8">
-          <h2>Student placement</h2>
-          {!students?.length ? (
-            <p className="small">No student accounts yet.</p>
+          <h2>Approved students</h2>
+          {!students.length ? (
+            <p className="small">No approved student accounts yet.</p>
           ) : (
             <div className="list">
-              {students.map((student) => {
+              {students.map((student: any) => {
                 const enrollment = enrollmentByStudent.get(student.id);
-                const available = (classes || []).filter((item: any) => item.id !== enrollment?.class_id);
+                const available = classes.filter((item: any) => item.id !== enrollment?.class_id);
                 return (
                   <div className="card" key={student.id} style={{ boxShadow: "none" }}>
                     <div className="row">
