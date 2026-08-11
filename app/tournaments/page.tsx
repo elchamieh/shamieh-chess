@@ -50,7 +50,7 @@ export default async function PublicTournamentsPage({
   return (
     <main className="public-site public-tournaments-page">
       <header className="public-header">
-        <Link href="/" className="public-logo" aria-label="Shamieh Chess Academy home"><ShamiehLogo /></Link>
+        <ShamiehLogo className="public-logo" />
         <nav className="public-nav" aria-label="Main navigation">
           <Link href="/#academy">Academy</Link>
           <Link href="/#locations">Saida & Beirut</Link>
