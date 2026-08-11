@@ -1,10 +1,11 @@
 import Link from "next/link";
+import ShamiehLogo from "@/components/ShamiehLogo";
 
 export default function HomePage() {
   return (
     <main className="shell">
       <header className="topbar">
-        <div className="brand">SHAMIEH CHESS</div>
+        <ShamiehLogo className="topbar-logo" />
         <nav className="nav">
           <span>Academy</span><span>Saida</span><span>Beirut</span><span>Tournaments</span><span>Shop</span>
           <Link href="/login" className="btn secondary">Student Login</Link>
