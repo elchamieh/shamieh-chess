@@ -1,8 +1,14 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import PortalShell from "@/components/PortalShell";
+import AdminStudentAccountActions from "@/components/AdminStudentAccountActions";
 import { createClient } from "@/lib/supabase/server";
 import { approveStudent, createStudent, moveStudent } from "./actions";
+
+function formatBirthDate(value: string | null) {
+  if (!value) return "Not provided";
+  return new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeZone: "UTC" }).format(new Date(`${value}T00:00:00Z`));
+}
 
 export default async function AdminStudentsPage({
   searchParams,
@@ -16,14 +22,14 @@ export default async function AdminStudentsPage({
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("full_name, role, approved")
+    .select("full_name, role, approved, frozen")
     .eq("id", user.id)
     .single();
-  if (profile?.role !== "admin" || profile?.approved !== true) redirect("/portal");
+  if (profile?.role !== "admin" || profile?.approved !== true || profile?.frozen === true) redirect("/portal");
 
   const [studentsResult, pendingResult, classesResult, enrollmentsResult] = await Promise.all([
-    supabase.from("profiles").select("id, full_name").eq("role", "student").eq("approved", true).order("full_name"),
-    supabase.from("profiles").select("id, full_name, created_at").eq("role", "student").eq("approved", false).order("created_at"),
+    supabase.from("profiles").select("id, full_name, date_of_birth, fide_id, frozen, frozen_at").eq("role", "student").eq("approved", true).order("full_name"),
+    supabase.from("profiles").select("id, full_name, date_of_birth, fide_id, created_at").eq("role", "student").eq("approved", false).order("created_at"),
     supabase
       .from("classes")
       .select("id, name, branch:branches(name), level:levels(name, sort_order)")
@@ -58,7 +64,7 @@ export default async function AdminStudentsPage({
         <div className="row">
           <div>
             <h2 style={{ marginBottom: 4 }}>Pending registrations</h2>
-            <div className="small">Students who register themselves appear here. Approval is final only when you choose their class and approve them.</div>
+            <div className="small">Students who register themselves appear here. Review their date of birth and optional FIDE ID, then choose their class.</div>
           </div>
           <span className="pill">{pendingStudents.length} pending</span>
         </div>
@@ -71,7 +77,9 @@ export default async function AdminStudentsPage({
               <div className="card" key={student.id} style={{ boxShadow: "none" }}>
                 <div>
                   <h3 style={{ marginBottom: 6 }}>{student.full_name}</h3>
-                  <div className="small">Registered {new Date(student.created_at).toLocaleDateString("en-GB")}</div>
+                  <div className="small">Date of birth: <b>{formatBirthDate(student.date_of_birth)}</b></div>
+                  <div className="small">FIDE ID: <b>{student.fide_id || "Not provided"}</b></div>
+                  <div className="small" style={{ marginTop: 4 }}>Registered {new Date(student.created_at).toLocaleDateString("en-GB")}</div>
                 </div>
                 <form action={approveStudent} style={{ marginTop: 12, display: "flex", gap: 8, alignItems: "end", flexWrap: "wrap" }}>
                   <input type="hidden" name="student_id" value={student.id} />
@@ -95,11 +103,19 @@ export default async function AdminStudentsPage({
       <div className="grid">
         <div className="card span4">
           <h2>Create student manually</h2>
-          <p className="small">You can still create a student yourself when needed. Admin-created students are approved immediately.</p>
+          <p className="small">Admin-created students are approved immediately and placed directly into a class.</p>
           <form action={createStudent}>
             <label className="field">
               <span>Full name</span>
               <input className="input" name="full_name" required placeholder="Student name" />
+            </label>
+            <label className="field">
+              <span>Date of birth</span>
+              <input className="input" name="date_of_birth" type="date" required />
+            </label>
+            <label className="field">
+              <span>FIDE ID <span className="small">(optional)</span></span>
+              <input className="input" name="fide_id" maxLength={32} placeholder="e.g. 1234567" />
             </label>
             <label className="field">
               <span>Email</span>
@@ -124,6 +140,7 @@ export default async function AdminStudentsPage({
 
         <div className="card span8">
           <h2>Approved students</h2>
+          <p className="small">Freeze keeps the student's records and class placement. Delete permanently removes the student account.</p>
           {!students.length ? (
             <p className="small">No approved student accounts yet.</p>
           ) : (
@@ -133,23 +150,26 @@ export default async function AdminStudentsPage({
                 const available = classes.filter((item: any) => item.id !== enrollment?.class_id);
                 return (
                   <div className="card" key={student.id} style={{ boxShadow: "none" }}>
-                    <div className="row">
+                    <div className="row" style={{ alignItems: "flex-start" }}>
                       <div>
                         <h3 style={{ marginBottom: 6 }}>{student.full_name}</h3>
+                        <div className="small">Date of birth: <b>{formatBirthDate(student.date_of_birth)}</b></div>
+                        <div className="small">FIDE ID: <b>{student.fide_id || "Not provided"}</b></div>
                         {enrollment ? (
-                          <div className="small">
+                          <div className="small" style={{ marginTop: 4 }}>
                             Current class: <b>{enrollment.class?.branch?.name} · {enrollment.class?.level?.name} · {enrollment.class?.name}</b>
                           </div>
                         ) : (
-                          <div className="small">No active class.</div>
+                          <div className="small" style={{ marginTop: 4 }}>No active class.</div>
                         )}
                       </div>
+                      <span className="pill">{student.frozen ? "Frozen" : "Active"}</span>
                     </div>
 
                     {available.length ? (
-                      <form action={moveStudent} style={{ marginTop: 12, display: "flex", gap: 8, alignItems: "end" }}>
+                      <form action={moveStudent} style={{ marginTop: 12, display: "flex", gap: 8, alignItems: "end", flexWrap: "wrap" }}>
                         <input type="hidden" name="student_id" value={student.id} />
-                        <label className="field" style={{ margin: 0, flex: 1 }}>
+                        <label className="field" style={{ margin: 0, flex: 1, minWidth: 220 }}>
                           <span>{enrollment ? "Move to another class" : "Place in class"}</span>
                           <select className="input" name="class_id" required defaultValue="">
                             <option value="" disabled>Select class</option>
@@ -161,6 +181,12 @@ export default async function AdminStudentsPage({
                         <button className="btn" type="submit">{enrollment ? "Move" : "Place"}</button>
                       </form>
                     ) : null}
+
+                    <AdminStudentAccountActions
+                      studentId={student.id}
+                      studentName={student.full_name}
+                      frozen={Boolean(student.frozen)}
+                    />
                   </div>
                 );
               })}
