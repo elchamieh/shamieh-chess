@@ -2,6 +2,15 @@ import Link from "next/link";
 import ShamiehLogo from "@/components/ShamiehLogo";
 import { registerStudent } from "./actions";
 
+const errorMessages: Record<string, string> = {
+  missing_fields: "Please complete all required fields and use a password of at least 8 characters.",
+  invalid_birth_date: "Please enter a valid date of birth.",
+  fide_too_long: "The FIDE ID is too long.",
+  phone_too_long: "The phone number is too long.",
+  account_exists: "This email already has an account. Please sign in or reset your password instead of registering again.",
+  registration_failed: "We could not submit the registration. Please try again.",
+};
+
 export default async function RegisterPage({
   searchParams,
 }: {
@@ -16,14 +25,14 @@ export default async function RegisterPage({
         <span className="pill">Student Registration</span>
         <h1 style={{ marginTop: 14 }}>Join Shamieh Chess</h1>
         <p className="small">
-          Create your login request. Your registration becomes active only after academy approval and class placement.
+          Create your academy account request. Your login becomes active after academy approval and class placement.
         </p>
 
         {params.submitted ? (
           <div className="card" style={{ boxShadow: "none", margin: "16px 0" }}>
             <b>Registration submitted.</b>
             <p className="small" style={{ marginBottom: 0 }}>
-              Confirm your email if Supabase sends you a verification message. After that, wait for academy approval before signing in.
+              Wait for academy approval. Once you are approved and placed in a class, your login will be activated automatically. You do not need to register again.
             </p>
           </div>
         ) : null}
@@ -31,7 +40,14 @@ export default async function RegisterPage({
         {params.error ? (
           <div className="card" style={{ boxShadow: "none", margin: "16px 0" }}>
             <b>Could not submit registration.</b>
-            <div className="small">{decodeURIComponent(params.error)}</div>
+            <div className="small">{errorMessages[params.error] || errorMessages.registration_failed}</div>
+            {params.error === "account_exists" ? (
+              <div style={{ marginTop: 10 }}>
+                <Link href="/login" className="small"><b>Sign in</b></Link>
+                <span className="small"> · </span>
+                <Link href="/forgot-password" className="small"><b>Reset password</b></Link>
+              </div>
+            ) : null}
           </div>
         ) : null}
 
@@ -55,11 +71,11 @@ export default async function RegisterPage({
             </label>
             <label className="field">
               <span>Email</span>
-              <input className="input" name="email" type="email" required placeholder="student@example.com" />
+              <input className="input" name="email" type="email" required placeholder="student@example.com" autoComplete="email" />
             </label>
             <label className="field">
               <span>Password</span>
-              <input className="input" name="password" type="password" required minLength={8} placeholder="At least 8 characters" />
+              <input className="input" name="password" type="password" required minLength={8} placeholder="At least 8 characters" autoComplete="new-password" />
             </label>
             <button className="btn" type="submit" style={{ width: "100%" }}>
               Submit registration

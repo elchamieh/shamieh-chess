@@ -86,6 +86,15 @@ export async function approveStudent(formData: FormData) {
     redirect(`/portal/admin/students?error=${encodeURIComponent(enrollmentError?.message || "Could not place student")}`);
   }
 
+  const { data: confirmData, error: confirmInvokeError } = await supabase.functions.invoke("admin-manage-student", {
+    body: { student_id, action: "confirm_email" },
+  });
+
+  if (confirmInvokeError || confirmData?.error) {
+    await supabase.from("student_enrollments").delete().eq("id", enrollment.id);
+    redirect(`/portal/admin/students?error=${encodeURIComponent(confirmData?.error || confirmInvokeError?.message || "Could not activate the student login")}`);
+  }
+
   const { error: approvalError } = await supabase
     .from("profiles")
     .update({ approved: true, approved_at: new Date().toISOString(), frozen: false, frozen_at: null })
