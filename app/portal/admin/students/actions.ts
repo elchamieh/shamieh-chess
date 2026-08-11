@@ -27,9 +27,10 @@ export async function createStudent(formData: FormData) {
   const class_id = String(formData.get("class_id") || "");
   const date_of_birth = String(formData.get("date_of_birth") || "").trim();
   const fide_id = String(formData.get("fide_id") || "").trim();
+  const phone = String(formData.get("phone") || "").trim();
 
   const { data, error } = await supabase.functions.invoke("admin-create-student", {
-    body: { full_name, email, password, class_id, date_of_birth, fide_id },
+    body: { full_name, email, password, class_id, date_of_birth, fide_id, phone },
   });
 
   if (error || data?.error) {
