@@ -1,0 +1,46 @@
+import { NextRequest, NextResponse } from "next/server";
+
+const PUBLIC_HOST = "shamiehchess.com";
+const APP_HOST = "app.shamiehchess.com";
+
+const APP_ONLY_PATHS = [
+  "/login",
+  "/register",
+  "/portal",
+  "/forgot-password",
+  "/reset-password",
+  "/auth/callback",
+];
+
+function isAppOnlyPath(pathname: string) {
+  return APP_ONLY_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));
+}
+
+export function middleware(request: NextRequest) {
+  const hostname = (request.headers.get("host") || "").split(":")[0].toLowerCase();
+  const { pathname, search } = request.nextUrl;
+
+  if (hostname === `www.${PUBLIC_HOST}`) {
+    return NextResponse.redirect(`https://${PUBLIC_HOST}${pathname}${search}`);
+  }
+
+  if (hostname === PUBLIC_HOST && isAppOnlyPath(pathname)) {
+    return NextResponse.redirect(`https://${APP_HOST}${pathname}${search}`);
+  }
+
+  if (hostname === APP_HOST) {
+    if (pathname === "/") {
+      return NextResponse.redirect(`https://${APP_HOST}/login`);
+    }
+
+    if (pathname === "/tournaments" || pathname.startsWith("/tournaments/")) {
+      return NextResponse.redirect(`https://${PUBLIC_HOST}${pathname}${search}`);
+    }
+  }
+
+  return NextResponse.next();
+}
+
+export const config = {
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|images/|shamieh-logo.svg).*)"],
+};
