@@ -13,11 +13,11 @@ export async function registerForTournament(formData: FormData) {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role, approved")
+    .select("role, approved, frozen")
     .eq("id", user.id)
     .single();
 
-  if (profile?.role !== "student" || profile?.approved !== true) return;
+  if (profile?.role !== "student" || profile?.approved !== true || profile?.frozen === true) return;
 
   const { data: tournament } = await supabase
     .from("tournaments")
