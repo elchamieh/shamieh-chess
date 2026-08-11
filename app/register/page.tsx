@@ -42,6 +42,14 @@ export default async function RegisterPage({
               <input className="input" name="full_name" required placeholder="Student name" />
             </label>
             <label className="field">
+              <span>Date of birth</span>
+              <input className="input" name="date_of_birth" type="date" required />
+            </label>
+            <label className="field">
+              <span>FIDE ID <span className="small">(optional)</span></span>
+              <input className="input" name="fide_id" maxLength={32} placeholder="e.g. 1234567" />
+            </label>
+            <label className="field">
               <span>Email</span>
               <input className="input" name="email" type="email" required placeholder="student@example.com" />
             </label>
