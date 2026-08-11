@@ -17,6 +17,25 @@ function formatFee(amount: number | string | null, currency: string | null) {
   return `$${new Intl.NumberFormat("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(numericAmount)}`;
 }
 
+const levels = [
+  {
+    name: "Starters",
+    text: "A welcoming first step into chess: the board, the pieces, the rules, and the habits that make learning enjoyable.",
+  },
+  {
+    name: "Beginners",
+    text: "Build strong foundations through tactics, opening principles, calculation, and confident over-the-board play.",
+  },
+  {
+    name: "Intermediate",
+    text: "Turn knowledge into consistent play with deeper calculation, strategy, endgames, and tournament discipline.",
+  },
+  {
+    name: "Advanced",
+    text: "Prepare for serious competition with stronger analysis, positional understanding, preparation, and decision-making.",
+  },
+];
+
 export default async function HomePage() {
   const supabase = await createClient();
   const { data: tournaments } = await supabase
@@ -46,56 +65,83 @@ export default async function HomePage() {
           <span className="public-eyebrow">SHAMIEH CHESS ACADEMY · SAIDA · BEIRUT</span>
           <h1>Train with purpose.<br />Play with confidence.</h1>
           <p>
-            Structured chess training for every level, from first moves to advanced competitive play — with academy classes, tournaments, and a growing chess community in Saida and Beirut.
+            A structured chess academy where players learn step by step, challenge themselves over the board, and grow into confident competitors — with classes in Saida and Beirut and tournaments open to the wider chess community.
           </p>
           <div className="public-actions">
             <Link className="btn public-primary" href="/register">Join the Academy</Link>
             <Link className="btn secondary" href="/tournaments">View Tournaments</Link>
+            <Link className="public-text-link" href="/login">Student login →</Link>
           </div>
           <div className="public-quickfacts">
             <div><b>2</b><span>Academy locations</span></div>
             <div><b>4</b><span>Training levels</span></div>
-            <div><b>♟</b><span>Classes & tournaments</span></div>
+            <div><b>♟</b><span>Training & competition</span></div>
           </div>
         </div>
-        <div className="public-hero-art" aria-hidden="true">
-          <div className="hero-ring hero-ring-one" />
-          <div className="hero-ring hero-ring-two" />
-          <div className="hero-piece">♞</div>
-          <div className="hero-card hero-card-top">Train</div>
-          <div className="hero-card hero-card-bottom">Compete</div>
+        <figure className="public-hero-media">
+          <img src="/academy-photo/tournament-hall" alt="Players competing in a Shamieh Chess tournament" />
+          <figcaption>Learn in class. Test your game over the board.</figcaption>
+        </figure>
+      </section>
+
+      <section className="public-section public-academy-story" id="academy">
+        <div className="public-story-media">
+          <img src="/academy-photo/classroom-training" alt="Shamieh Chess classroom training session" />
+        </div>
+        <div className="public-story-copy">
+          <span className="public-eyebrow">STRUCTURED TRAINING</span>
+          <h2>A chess pathway built for real progress.</h2>
+          <p className="public-lead">
+            Good chess development is more than learning moves. Students need the right ideas at the right time, regular practice, feedback, and opportunities to compete.
+          </p>
+          <p>
+            At Shamieh Chess Academy, players progress through clear training levels so each student can build strong fundamentals, improve decision-making, and keep moving forward at an appropriate pace.
+          </p>
         </div>
       </section>
 
-      <section className="public-section" id="academy">
+      <section className="public-section public-levels-section">
         <div className="public-section-heading">
-          <span className="public-eyebrow">THE ACADEMY</span>
-          <h2>A clear path for every player</h2>
-          <p>Students progress through structured levels with coaching, practice, homework, and over-the-board play.</p>
+          <span className="public-eyebrow">FOUR TRAINING LEVELS</span>
+          <h2>Start where you are. Build from there.</h2>
+          <p>Placement is based on the player&apos;s current level and experience, giving every student a clear next step.</p>
         </div>
         <div className="public-level-grid">
-          {["Starters", "Beginners", "Intermediate", "Advanced"].map((level, index) => (
-            <div className="public-level-card" key={level}>
+          {levels.map((level, index) => (
+            <article className="public-level-card" key={level.name}>
               <span>0{index + 1}</span>
-              <h3>{level}</h3>
-              <p>{index === 0 ? "Learn the board, pieces, rules, and the habits that make chess fun." : index === 1 ? "Build tactical awareness, opening principles, and confident game play." : index === 2 ? "Strengthen calculation, strategy, endgames, and tournament discipline." : "Develop deeper preparation, calculation, positional understanding, and competitive consistency."}</p>
-            </div>
+              <h3>{level.name}</h3>
+              <p>{level.text}</p>
+            </article>
           ))}
+        </div>
+      </section>
+
+      <section className="public-community-band">
+        <div className="public-community-photo">
+          <img src="/academy-photo/academy-community" alt="Shamieh Chess Academy students and coaches together" />
+        </div>
+        <div className="public-community-copy">
+          <span className="public-eyebrow">MORE THAN LESSONS</span>
+          <h2>A place to learn, belong, and compete.</h2>
+          <p>
+            Chess becomes more meaningful when players share the journey. Students train together, play over the board, take part in events, and become part of an active chess community that celebrates effort as much as results.
+          </p>
         </div>
       </section>
 
       <section className="public-section public-locations" id="locations">
         <div className="public-section-heading">
-          <span className="public-eyebrow">TWO LOCATIONS</span>
-          <h2>Train with Shamieh Chess in Saida or Beirut</h2>
-          <p>Choose the location that works for your family while following the same academy structure and progression.</p>
+          <span className="public-eyebrow">ONE ACADEMY · TWO LOCATIONS</span>
+          <h2>Train with Shamieh Chess in Saida or Beirut.</h2>
+          <p>The same academy philosophy and progression, with the flexibility to choose the location that works best for your family.</p>
         </div>
         <div className="public-location-grid">
           <article className="public-location-card">
             <div className="location-marker">01</div>
             <div>
               <h3>Saida</h3>
-              <p>Academy classes across Starters, Beginners, Intermediate, and Advanced levels.</p>
+              <p>Structured academy classes for players progressing from their first chess lessons to advanced competitive training.</p>
               <Link href="/register">Register for Saida →</Link>
             </div>
           </article>
@@ -103,21 +149,27 @@ export default async function HomePage() {
             <div className="location-marker">02</div>
             <div>
               <h3>Beirut</h3>
-              <p>Structured chess training with the same academy progression and competitive pathway.</p>
+              <p>Join the same Shamieh Chess training pathway in Beirut, with level-based coaching and opportunities to compete.</p>
               <Link href="/register">Register for Beirut →</Link>
             </div>
           </article>
         </div>
+        <p className="public-location-note">Not sure which level is right? Register first and the academy can place the player in the appropriate class.</p>
       </section>
 
       <section className="public-section public-tournaments" id="tournaments">
-        <div className="public-section-heading public-heading-row">
-          <div>
-            <span className="public-eyebrow">UPCOMING TOURNAMENTS</span>
-            <h2>Play. Compete. Improve.</h2>
-            <p>Public tournaments are listed here directly from the academy tournament system.</p>
+        <div className="public-tournament-intro">
+          <div className="public-tournament-photo">
+            <img src="/academy-photo/tournament-winners" alt="Shamieh Chess tournament players with trophies and medals" />
           </div>
-          <Link className="btn secondary" href="/tournaments">See all tournaments</Link>
+          <div className="public-section-heading">
+            <span className="public-eyebrow">FROM TRAINING TO COMPETITION</span>
+            <h2>Play. Compete. Improve.</h2>
+            <p>
+              Competition is part of development. Shamieh Chess tournaments give academy students and other players a place to test their preparation, gain experience, and enjoy serious over-the-board chess.
+            </p>
+            <Link className="btn secondary" href="/tournaments">See all tournaments</Link>
+          </div>
         </div>
 
         {!tournaments?.length ? (
@@ -148,9 +200,9 @@ export default async function HomePage() {
 
       <section className="public-cta">
         <div>
-          <span className="public-eyebrow">READY TO START?</span>
-          <h2>Make chess part of their week.</h2>
-          <p>Register as an academy student, or join one of our public tournaments.</p>
+          <span className="public-eyebrow">YOUR NEXT MOVE</span>
+          <h2>Ready to make chess part of the week?</h2>
+          <p>Join the academy in Saida or Beirut, or register for an upcoming public tournament.</p>
         </div>
         <div className="public-actions">
           <Link className="btn public-primary" href="/register">Join Shamieh Chess</Link>
@@ -161,7 +213,11 @@ export default async function HomePage() {
       <footer className="public-footer">
         <div><ShamiehLogo /></div>
         <div>Shamieh Chess Academy · Saida & Beirut</div>
-        <div className="public-footer-links"><Link href="/login">Student Login</Link><Link href="/tournaments">Tournaments</Link></div>
+        <div className="public-footer-links">
+          <a href="https://www.facebook.com/shamieh.chess.academy" target="_blank" rel="noreferrer">Facebook</a>
+          <Link href="/login">Student Login</Link>
+          <Link href="/tournaments">Tournaments</Link>
+        </div>
       </footer>
     </main>
   );
