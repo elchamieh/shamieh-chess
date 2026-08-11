@@ -12,7 +12,7 @@ export default async function PortalPage() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("id, full_name, role, approved, date_of_birth, fide_id, frozen")
+    .select("id, full_name, role, approved, date_of_birth, fide_id, phone, frozen")
     .eq("id", user.id)
     .single();
 
