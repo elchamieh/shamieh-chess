@@ -1,5 +1,6 @@
 import PortalShell from "./PortalShell";
 import CoachHomeworkForm from "./CoachHomeworkForm";
+import DeleteHomeworkButton from "./DeleteHomeworkButton";
 import { createClient } from "@/lib/supabase/server";
 import { createHomeworkDownloadUrl } from "@/lib/homework-files";
 
@@ -130,7 +131,10 @@ export default async function CoachDashboard({ profile }: { profile: any }) {
                         <div className="small">{item.class?.name}{item.due_date ? ` · Due ${item.due_date}` : ""}</div>
                         {item.instructions ? <div style={{ marginTop: 8 }}>{item.instructions}</div> : null}
                       </div>
-                      <span className="pill">{itemSubmissions.length}/{students.length} submitted</span>
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end", alignItems: "center" }}>
+                        <span className="pill">{itemSubmissions.length}/{students.length} submitted</span>
+                        <DeleteHomeworkButton homeworkId={item.id} />
+                      </div>
                     </div>
 
                     <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
