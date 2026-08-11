@@ -44,7 +44,7 @@ export default async function HomePage() {
       <section className="public-hero">
         <div className="public-hero-copy">
           <span className="public-eyebrow">SHAMIEH CHESS ACADEMY · SAIDA · BEIRUT</span>
-          <h1>Think ahead.<br />Play with confidence.</h1>
+          <h1>Train with purpose.<br />Play with confidence.</h1>
           <p>
             Structured chess training for every level, from first moves to advanced competitive play — with academy classes, tournaments, and a growing chess community in Saida and Beirut.
           </p>
