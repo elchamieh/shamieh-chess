@@ -47,7 +47,7 @@ export async function registerStudent(formData: FormData) {
         fide_id: fide_id || null,
         phone: phone || null,
       },
-      emailRedirectTo: "https://shamieh-chess.vercel.app/login",
+      emailRedirectTo: "https://app.shamiehchess.com/login",
     },
   });
 
@@ -60,14 +60,10 @@ export async function registerStudent(formData: FormData) {
     redirect("/register?error=registration_failed");
   }
 
-  // Supabase can intentionally return an obfuscated success response for an
-  // already-existing email. An empty identities array is the reliable signal
-  // that the person should sign in/reset instead of creating another request.
   if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
     redirect("/register?error=account_exists");
   }
 
-  // Pending applicants should never remain signed into the academy platform.
   if (data.session) await supabase.auth.signOut();
 
   redirect("/register?submitted=1");
