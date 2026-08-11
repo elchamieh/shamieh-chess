@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import PortalShell from "@/components/PortalShell";
+import DeleteHomeworkButton from "@/components/DeleteHomeworkButton";
 import { createClient } from "@/lib/supabase/server";
 import { createHomeworkDownloadUrl } from "@/lib/homework-files";
 
@@ -116,7 +117,7 @@ export default async function AdminHomeworkPage() {
 
         <div className="card span7">
           <h2>Homework & submissions</h2>
-          <p className="small">See homework published by coaches, download the original files, and track each student submission.</p>
+          <p className="small">See homework published by coaches, download the original files, track submissions, or remove homework when needed.</p>
           {!homeworkWithDownloads.length ? (
             <p className="small">No homework posted yet.</p>
           ) : (
@@ -138,7 +139,10 @@ export default async function AdminHomeworkPage() {
                           Posted {formatDate(item.created_at)}{item.due_date ? ` · Due ${item.due_date}` : ""}
                         </div>
                       </div>
-                      <span className="pill">{itemSubmissions.length}/{students.length} submitted</span>
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end", alignItems: "center" }}>
+                        <span className="pill">{itemSubmissions.length}/{students.length} submitted</span>
+                        <DeleteHomeworkButton homeworkId={item.id} />
+                      </div>
                     </div>
 
                     {item.instructions ? <p>{item.instructions}</p> : null}
