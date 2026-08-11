@@ -107,7 +107,7 @@ export default async function RegisterPage({
           <Link href="/login" className="small">Already registered? Sign in</Link>
         </div>
         <div style={{ marginTop: 12 }}>
-          <Link href="/" className="btn secondary" style={{ width: "100%", textAlign: "center" }}>
+          <Link href="https://www.shamiehchess.com" className="btn secondary" style={{ width: "100%", textAlign: "center" }}>
             ← Back to main page
           </Link>
         </div>

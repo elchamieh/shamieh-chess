@@ -50,7 +50,7 @@ export default async function LoginPage({
           <Link href="/register" className="small">New student? Register for approval</Link>
         </div>
         <div style={{ marginTop: 12 }}>
-          <Link href="/" className="btn secondary" style={{ width: "100%", textAlign: "center" }}>
+          <Link href="https://www.shamiehchess.com" className="btn secondary" style={{ width: "100%", textAlign: "center" }}>
             ← Back to main page
           </Link>
         </div>
