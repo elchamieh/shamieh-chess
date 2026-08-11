@@ -1,5 +1,7 @@
 import PortalShell from "./PortalShell";
+import StudentHomeworkSubmissionForm from "./StudentHomeworkSubmissionForm";
 import { createClient } from "@/lib/supabase/server";
+import { createHomeworkDownloadUrl } from "@/lib/homework-files";
 import { registerForTournament } from "@/app/portal/tournaments/actions";
 
 function formatDate(value: string) {
@@ -20,7 +22,7 @@ function formatFee(amount: number | string | null, currency: string | null) {
 export default async function StudentDashboard({ profile }: { profile: any }) {
   const supabase = await createClient();
 
-  const [{ data: enrollment }, { data: tournaments }, { data: registrations }] = await Promise.all([
+  const [{ data: enrollment }, { data: tournaments }, { data: registrations }, { data: homeworkSubmissions }] = await Promise.all([
     supabase
       .from("student_enrollments")
       .select("class_id, class:classes(id, name, branch:branches(name), level:levels(name))")
@@ -36,6 +38,10 @@ export default async function StudentDashboard({ profile }: { profile: any }) {
       .from("tournament_registrations")
       .select("tournament_id, status, registered_at")
       .eq("student_id", profile.id),
+    supabase
+      .from("homework_submissions")
+      .select("id, homework_id, file_path, file_name, submitted_at, updated_at")
+      .eq("student_id", profile.id),
   ]);
 
   let coaches: any[] = [];
@@ -49,7 +55,7 @@ export default async function StudentDashboard({ profile }: { profile: any }) {
         .eq("class_id", enrollment.class_id),
       supabase
         .from("homework")
-        .select("id, title, instructions, attachment_url, due_date, created_at")
+        .select("id, class_id, title, instructions, attachment_url, attachment_path, attachment_name, due_date, created_at")
         .eq("class_id", enrollment.class_id)
         .eq("published", true)
         .order("created_at", { ascending: false }),
@@ -58,6 +64,19 @@ export default async function StudentDashboard({ profile }: { profile: any }) {
     coaches = (coachResult.data || []).map((item: any) => item.coach).filter(Boolean);
     homework = homeworkResult.data || [];
   }
+
+  const homeworkWithDownloads = await Promise.all(homework.map(async (item: any) => ({
+    ...item,
+    attachment_download_url: await createHomeworkDownloadUrl(supabase, item.attachment_path),
+  })));
+
+  const submissionsWithDownloads = await Promise.all((homeworkSubmissions || []).map(async (item: any) => ({
+    ...item,
+    download_url: await createHomeworkDownloadUrl(supabase, item.file_path),
+  })));
+
+  const submissionByHomework = new Map<string, any>();
+  for (const submission of submissionsWithDownloads) submissionByHomework.set(submission.homework_id, submission);
 
   const classInfo: any = enrollment?.class;
   const registrationByTournament = new Map<string, any>();
@@ -91,20 +110,51 @@ export default async function StudentDashboard({ profile }: { profile: any }) {
           <h2>Homework</h2>
           {!enrollment ? (
             <p className="small">Homework will appear after class placement.</p>
-          ) : !homework.length ? (
+          ) : !homeworkWithDownloads.length ? (
             <p className="small">No homework assigned yet.</p>
           ) : (
             <div className="list">
-              {homework.map((item) => (
-                <div className="card" key={item.id} style={{ boxShadow: "none" }}>
-                  <b>{item.title}</b>
-                  {item.due_date ? <div className="small" style={{ marginTop: 4 }}>Due {item.due_date}</div> : null}
-                  {item.instructions ? <p>{item.instructions}</p> : null}
-                  {item.attachment_url ? (
-                    <a className="btn secondary" href={item.attachment_url} target="_blank" rel="noreferrer">Open resource</a>
-                  ) : null}
-                </div>
-              ))}
+              {homeworkWithDownloads.map((item: any) => {
+                const submission = submissionByHomework.get(item.id);
+                return (
+                  <div className="card" key={item.id} style={{ boxShadow: "none" }}>
+                    <div className="row" style={{ alignItems: "flex-start" }}>
+                      <div>
+                        <h3 style={{ marginBottom: 6 }}>{item.title}</h3>
+                        {item.due_date ? <div className="small">Due {item.due_date}</div> : null}
+                      </div>
+                      {submission ? <span className="pill">Submitted</span> : <span className="pill">To do</span>}
+                    </div>
+
+                    {item.instructions ? <p>{item.instructions}</p> : null}
+
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>
+                      {item.attachment_download_url ? (
+                        <a className="btn secondary" href={item.attachment_download_url}>Download {item.attachment_name || "homework file"}</a>
+                      ) : null}
+                      {item.attachment_url ? (
+                        <a className="btn secondary" href={item.attachment_url} target="_blank" rel="noreferrer">Open resource link</a>
+                      ) : null}
+                      {submission?.download_url ? (
+                        <a className="btn secondary" href={submission.download_url}>Download my submission</a>
+                      ) : null}
+                    </div>
+
+                    {submission ? (
+                      <div className="small" style={{ marginTop: 10 }}>
+                        Submitted {formatDate(submission.submitted_at)} · {submission.file_name}
+                      </div>
+                    ) : null}
+
+                    <StudentHomeworkSubmissionForm
+                      homeworkId={item.id}
+                      classId={item.class_id}
+                      studentId={profile.id}
+                      existingPath={submission?.file_path || null}
+                    />
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
