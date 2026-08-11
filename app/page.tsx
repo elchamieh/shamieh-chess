@@ -54,7 +54,7 @@ export default async function HomePage() {
           <a href="#academy">Academy</a>
           <a href="#locations">Saida & Beirut</a>
           <Link href="/tournaments">Tournaments</Link>
-          <Link href="/register">Join the Academy</Link>
+          <Link href="/register" className="btn public-header-join">Join Academy</Link>
           <Link href="/login" className="btn secondary">Student Login</Link>
         </nav>
       </header>
@@ -78,14 +78,28 @@ export default async function HomePage() {
           </div>
         </div>
         <figure className="public-hero-media">
-          <img src="/images/shamieh-tournament.webp" alt="Players competing in a Shamieh Chess tournament" />
+          <img
+            src="/images/shamieh-tournament.webp"
+            alt="Players competing in a Shamieh Chess tournament"
+            width="1536"
+            height="1024"
+            fetchPriority="high"
+            decoding="async"
+          />
           <figcaption>Learn in class. Test your game over the board.</figcaption>
         </figure>
       </section>
 
       <section className="public-section public-academy-story" id="academy">
         <div className="public-story-media">
-          <img src="/images/shamieh-training.webp" alt="Shamieh Chess classroom training session" />
+          <img
+            src="/images/shamieh-training.webp"
+            alt="Shamieh Chess classroom training session"
+            width="1536"
+            height="1024"
+            loading="lazy"
+            decoding="async"
+          />
         </div>
         <div className="public-story-copy">
           <span className="public-eyebrow">STRUCTURED TRAINING</span>
@@ -118,7 +132,14 @@ export default async function HomePage() {
 
       <section className="public-community-band">
         <div className="public-community-photo">
-          <img src="/images/shamieh-community.webp" alt="Shamieh Chess Academy students and coaches together" />
+          <img
+            src="/images/shamieh-community.webp"
+            alt="Shamieh Chess Academy students and coaches together"
+            width="1440"
+            height="1080"
+            loading="lazy"
+            decoding="async"
+          />
         </div>
         <div className="public-community-copy">
           <span className="public-eyebrow">MORE THAN LESSONS</span>
@@ -159,7 +180,14 @@ export default async function HomePage() {
       <section className="public-section public-tournaments" id="tournaments">
         <div className="public-tournament-intro">
           <div className="public-tournament-photo">
-            <img src="/images/shamieh-achievements.webp" alt="Shamieh Chess tournament players with trophies and medals" />
+            <img
+              src="/images/shamieh-achievements.webp"
+              alt="Shamieh Chess tournament players with trophies and medals"
+              width="1536"
+              height="1024"
+              loading="lazy"
+              decoding="async"
+            />
           </div>
           <div className="public-section-heading">
             <span className="public-eyebrow">FROM TRAINING TO COMPETITION</span>
