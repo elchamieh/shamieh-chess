@@ -12,6 +12,11 @@ function formatDate(value: string) {
   }).format(new Date(value));
 }
 
+function formatBirthDate(value: string | null) {
+  if (!value) return "Not provided";
+  return new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeZone: "UTC" }).format(new Date(`${value}T00:00:00Z`));
+}
+
 function toBeirutInputValue(value: string | null) {
   if (!value) return "";
   const parts = new Intl.DateTimeFormat("en-CA", {
@@ -56,7 +61,7 @@ export default async function AdminTournamentsPage({ searchParams }: { searchPar
       .order("starts_at", { ascending: false }),
     supabase
       .from("tournament_registrations")
-      .select("id, tournament_id, status, registered_at, student:profiles(id, full_name)")
+      .select("id, tournament_id, student_id, registrant_name, registrant_email, registrant_phone, date_of_birth, fide_id, status, registered_at, student:profiles(id, full_name)")
       .order("registered_at", { ascending: true }),
   ]);
 
@@ -81,7 +86,7 @@ export default async function AdminTournamentsPage({ searchParams }: { searchPar
       <div className="grid">
         <div className="card span4">
           <h2>Create tournament</h2>
-          <p className="small">Times below are entered in Lebanon time.</p>
+          <p className="small">Times below are entered in Lebanon time. When registration is open, the tournament also appears on the public website.</p>
           <form action={createTournament}>
             <label className="field">
               <span>Title</span>
@@ -129,6 +134,7 @@ export default async function AdminTournamentsPage({ searchParams }: { searchPar
 
         <div className="card span8">
           <h2>Events & registrations</h2>
+          <p className="small">Registrations can now come from academy student accounts or directly from the public tournament page.</p>
           {!tournaments?.length ? (
             <p className="small">No tournaments created yet.</p>
           ) : (
@@ -149,6 +155,7 @@ export default async function AdminTournamentsPage({ searchParams }: { searchPar
                         {tournament.registration_deadline ? <div className="small" style={{ marginTop: 4 }}>Registration deadline: {formatDate(tournament.registration_deadline)}</div> : null}
                       </div>
                       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                        <a className="btn secondary" href={`/tournaments#tournament-${tournament.id}`} target="_blank" rel="noreferrer">Public page</a>
                         <form action={setTournamentRegistration}>
                           <input type="hidden" name="tournament_id" value={tournament.id} />
                           <input type="hidden" name="open_for_registration" value={tournament.open_for_registration ? "false" : "true"} />
@@ -216,18 +223,33 @@ export default async function AdminTournamentsPage({ searchParams }: { searchPar
                     <div style={{ marginTop: 14 }}>
                       <b>{eventRegistrations.length} registration{eventRegistrations.length === 1 ? "" : "s"}</b>
                       {!eventRegistrations.length ? (
-                        <div className="small" style={{ marginTop: 6 }}>No students registered yet.</div>
+                        <div className="small" style={{ marginTop: 6 }}>No registrations yet.</div>
                       ) : (
                         <div className="list" style={{ marginTop: 8 }}>
-                          {eventRegistrations.map((registration: any) => (
-                            <div className="row" key={registration.id}>
-                              <div>
-                                <b>{registration.student?.full_name || "Student"}</b>
-                                <div className="small">Registered {formatDate(registration.registered_at)}</div>
+                          {eventRegistrations.map((registration: any) => {
+                            const isPublic = !registration.student_id;
+                            const participantName = registration.student?.full_name || registration.registrant_name || "Participant";
+                            return (
+                              <div className="row" key={registration.id} style={{ alignItems: "flex-start" }}>
+                                <div>
+                                  <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                                    <b>{participantName}</b>
+                                    <span className="pill">{isPublic ? "Public registration" : "Academy student"}</span>
+                                  </div>
+                                  {isPublic ? (
+                                    <div className="small" style={{ marginTop: 6, lineHeight: 1.6 }}>
+                                      Email: <b>{registration.registrant_email || "Not provided"}</b><br />
+                                      Phone: <b>{registration.registrant_phone || "Not provided"}</b><br />
+                                      Date of birth: <b>{formatBirthDate(registration.date_of_birth)}</b><br />
+                                      FIDE ID: <b>{registration.fide_id || "Not provided"}</b>
+                                    </div>
+                                  ) : null}
+                                  <div className="small" style={{ marginTop: 5 }}>Registered {formatDate(registration.registered_at)}</div>
+                                </div>
+                                <span className="pill">{registration.status}</span>
                               </div>
-                              <span className="pill">{registration.status}</span>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       )}
                     </div>
