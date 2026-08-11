@@ -10,6 +10,13 @@ function formatDate(value: string) {
   }).format(new Date(value));
 }
 
+function formatFee(amount: number | string | null, currency: string | null) {
+  if (amount === null || Number(amount) === 0) return "Free";
+  const numericAmount = Number(amount);
+  if (currency === "LBP") return `${new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(numericAmount)} LBP`;
+  return `$${new Intl.NumberFormat("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(numericAmount)}`;
+}
+
 export default async function StudentDashboard({ profile }: { profile: any }) {
   const supabase = await createClient();
 
@@ -22,7 +29,7 @@ export default async function StudentDashboard({ profile }: { profile: any }) {
       .maybeSingle(),
     supabase
       .from("tournaments")
-      .select("id, title, venue, starts_at, registration_deadline, description, open_for_registration, branch:branches(name)")
+      .select("id, title, venue, starts_at, registration_deadline, description, fee_amount, fee_currency, open_for_registration, branch:branches(name)")
       .gte("starts_at", new Date().toISOString())
       .order("starts_at", { ascending: true }),
     supabase
@@ -125,6 +132,7 @@ export default async function StudentDashboard({ profile }: { profile: any }) {
                           {tournament.branch?.name ? ` · ${tournament.branch.name}` : ""}
                           {tournament.venue ? ` · ${tournament.venue}` : ""}
                         </div>
+                        <div className="small" style={{ marginTop: 4 }}>Fee: {formatFee(tournament.fee_amount, tournament.fee_currency)}</div>
                         {tournament.registration_deadline ? (
                           <div className="small" style={{ marginTop: 4 }}>Register by {formatDate(tournament.registration_deadline)}</div>
                         ) : null}
