@@ -48,7 +48,7 @@ export default async function PortalPage() {
           <ShamiehLogo className="login-logo" />
           <span className="pill">Account Frozen</span>
           <h1 style={{ marginTop: 14 }}>Your academy account is currently frozen</h1>
-          <p>Your Shamieh Chess records are محفوظed, but portal access is temporarily disabled.</p>
+          <p>Your Shamieh Chess records and class placement are preserved, but portal access is temporarily disabled.</p>
           <p className="small">Please contact Shamieh Chess Academy if you believe the account should be reactivated.</p>
         </div>
       </main>
