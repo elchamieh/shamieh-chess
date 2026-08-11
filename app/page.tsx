@@ -49,9 +49,7 @@ export default async function HomePage() {
   return (
     <main className="public-site">
       <header className="public-header">
-        <Link href="/" className="public-logo" aria-label="Shamieh Chess Academy home">
-          <ShamiehLogo />
-        </Link>
+        <ShamiehLogo className="public-logo" />
         <nav className="public-nav" aria-label="Main navigation">
           <a href="#academy">Academy</a>
           <a href="#locations">Saida & Beirut</a>
