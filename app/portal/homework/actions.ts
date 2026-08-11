@@ -18,11 +18,13 @@ export async function recordHomeworkSubmission(input: SubmissionInput) {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role, approved")
+    .select("role, approved, frozen")
     .eq("id", user.id)
     .single();
 
-  if (profile?.role !== "student" || !profile.approved) return { ok: false, error: "Student access is required." };
+  if (profile?.role !== "student" || !profile.approved || profile.frozen === true) {
+    return { ok: false, error: "Student access is required." };
+  }
 
   const homeworkId = String(input.homeworkId || "").trim();
   const classId = String(input.classId || "").trim();
