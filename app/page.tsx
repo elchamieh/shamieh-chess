@@ -1,6 +1,7 @@
 import Link from "next/link";
 import ShamiehLogo from "@/components/ShamiehLogo";
 import { createClient } from "@/lib/supabase/server";
+import "./public-home.css";
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("en-GB", {
@@ -79,14 +80,14 @@ export default async function HomePage() {
           </div>
         </div>
         <figure className="public-hero-media">
-          <img src="/academy-photo/tournament-hall" alt="Players competing in a Shamieh Chess tournament" />
+          <img src="/images/shamieh-tournament.webp" alt="Players competing in a Shamieh Chess tournament" />
           <figcaption>Learn in class. Test your game over the board.</figcaption>
         </figure>
       </section>
 
       <section className="public-section public-academy-story" id="academy">
         <div className="public-story-media">
-          <img src="/academy-photo/classroom-training" alt="Shamieh Chess classroom training session" />
+          <img src="/images/shamieh-training.webp" alt="Shamieh Chess classroom training session" />
         </div>
         <div className="public-story-copy">
           <span className="public-eyebrow">STRUCTURED TRAINING</span>
@@ -119,7 +120,7 @@ export default async function HomePage() {
 
       <section className="public-community-band">
         <div className="public-community-photo">
-          <img src="/academy-photo/academy-community" alt="Shamieh Chess Academy students and coaches together" />
+          <img src="/images/shamieh-community.webp" alt="Shamieh Chess Academy students and coaches together" />
         </div>
         <div className="public-community-copy">
           <span className="public-eyebrow">MORE THAN LESSONS</span>
@@ -160,7 +161,7 @@ export default async function HomePage() {
       <section className="public-section public-tournaments" id="tournaments">
         <div className="public-tournament-intro">
           <div className="public-tournament-photo">
-            <img src="/academy-photo/tournament-winners" alt="Shamieh Chess tournament players with trophies and medals" />
+            <img src="/images/shamieh-achievements.webp" alt="Shamieh Chess tournament players with trophies and medals" />
           </div>
           <div className="public-section-heading">
             <span className="public-eyebrow">FROM TRAINING TO COMPETITION</span>
