@@ -50,6 +50,10 @@ export default async function RegisterPage({
               <input className="input" name="fide_id" maxLength={32} placeholder="e.g. 1234567" />
             </label>
             <label className="field">
+              <span>Phone number <span className="small">(optional)</span></span>
+              <input className="input" name="phone" type="tel" maxLength={32} placeholder="e.g. +961 3 123 456" />
+            </label>
+            <label className="field">
               <span>Email</span>
               <input className="input" name="email" type="email" required placeholder="student@example.com" />
             </label>
