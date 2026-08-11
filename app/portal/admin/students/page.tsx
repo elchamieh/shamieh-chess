@@ -28,8 +28,8 @@ export default async function AdminStudentsPage({
   if (profile?.role !== "admin" || profile?.approved !== true || profile?.frozen === true) redirect("/portal");
 
   const [studentsResult, pendingResult, classesResult, enrollmentsResult] = await Promise.all([
-    supabase.from("profiles").select("id, full_name, date_of_birth, fide_id, frozen, frozen_at").eq("role", "student").eq("approved", true).order("full_name"),
-    supabase.from("profiles").select("id, full_name, date_of_birth, fide_id, created_at").eq("role", "student").eq("approved", false).order("created_at"),
+    supabase.from("profiles").select("id, full_name, date_of_birth, fide_id, phone, frozen, frozen_at").eq("role", "student").eq("approved", true).order("full_name"),
+    supabase.from("profiles").select("id, full_name, date_of_birth, fide_id, phone, created_at").eq("role", "student").eq("approved", false).order("created_at"),
     supabase
       .from("classes")
       .select("id, name, branch:branches(name), level:levels(name, sort_order)")
@@ -64,7 +64,7 @@ export default async function AdminStudentsPage({
         <div className="row">
           <div>
             <h2 style={{ marginBottom: 4 }}>Pending registrations</h2>
-            <div className="small">Students who register themselves appear here. Review their date of birth and optional FIDE ID, then choose their class.</div>
+            <div className="small">Students who register themselves appear here. Review their date of birth, optional FIDE ID and phone, then choose their class.</div>
           </div>
           <span className="pill">{pendingStudents.length} pending</span>
         </div>
@@ -79,6 +79,7 @@ export default async function AdminStudentsPage({
                   <h3 style={{ marginBottom: 6 }}>{student.full_name}</h3>
                   <div className="small">Date of birth: <b>{formatBirthDate(student.date_of_birth)}</b></div>
                   <div className="small">FIDE ID: <b>{student.fide_id || "Not provided"}</b></div>
+                  <div className="small">Phone: <b>{student.phone || "Not provided"}</b></div>
                   <div className="small" style={{ marginTop: 4 }}>Registered {new Date(student.created_at).toLocaleDateString("en-GB")}</div>
                 </div>
                 <form action={approveStudent} style={{ marginTop: 12, display: "flex", gap: 8, alignItems: "end", flexWrap: "wrap" }}>
@@ -118,6 +119,10 @@ export default async function AdminStudentsPage({
               <input className="input" name="fide_id" maxLength={32} placeholder="e.g. 1234567" />
             </label>
             <label className="field">
+              <span>Phone number <span className="small">(optional)</span></span>
+              <input className="input" name="phone" type="tel" maxLength={32} placeholder="e.g. +961 3 123 456" />
+            </label>
+            <label className="field">
               <span>Email</span>
               <input className="input" name="email" type="email" required placeholder="student@example.com" />
             </label>
@@ -155,6 +160,7 @@ export default async function AdminStudentsPage({
                         <h3 style={{ marginBottom: 6 }}>{student.full_name}</h3>
                         <div className="small">Date of birth: <b>{formatBirthDate(student.date_of_birth)}</b></div>
                         <div className="small">FIDE ID: <b>{student.fide_id || "Not provided"}</b></div>
+                        <div className="small">Phone: <b>{student.phone || "Not provided"}</b></div>
                         {enrollment ? (
                           <div className="small" style={{ marginTop: 4 }}>
                             Current class: <b>{enrollment.class?.branch?.name} · {enrollment.class?.level?.name} · {enrollment.class?.name}</b>
