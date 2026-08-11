@@ -12,7 +12,7 @@ export default async function PortalPage() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("id, full_name, role, approved")
+    .select("id, full_name, role, approved, date_of_birth, fide_id, frozen")
     .eq("id", user.id)
     .single();
 
@@ -36,6 +36,20 @@ export default async function PortalPage() {
           <h1 style={{ marginTop: 14 }}>Registration received</h1>
           <p>Your account has been created, but academy access is not active yet.</p>
           <p className="small">The academy administrator must approve your registration and place you into a class first.</p>
+        </div>
+      </main>
+    );
+  }
+
+  if (profile.role === "student" && profile.frozen) {
+    return (
+      <main className="login">
+        <div className="card login-card">
+          <ShamiehLogo className="login-logo" />
+          <span className="pill">Account Frozen</span>
+          <h1 style={{ marginTop: 14 }}>Your academy account is currently frozen</h1>
+          <p>Your Shamieh Chess records are محفوظed, but portal access is temporarily disabled.</p>
+          <p className="small">Please contact Shamieh Chess Academy if you believe the account should be reactivated.</p>
         </div>
       </main>
     );
