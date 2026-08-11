@@ -2,6 +2,7 @@
 
 import { FormEvent, useState, useTransition } from "react";
 import { updateStudentProfile } from "@/app/portal/profile/actions";
+import StudentPasswordForm from "./StudentPasswordForm";
 
 export default function StudentProfileForm({
   fullName,
@@ -33,26 +34,36 @@ export default function StudentProfileForm({
   }
 
   return (
-    <form onSubmit={handleSubmit}>
-      <label className="field">
-        <span>Full name</span>
-        <input className="input" value={fullName} readOnly disabled />
-        <span className="small">Your name is managed by Shamieh Chess and cannot be edited here.</span>
-      </label>
-      <label className="field">
-        <span>Date of birth</span>
-        <input className="input" name="date_of_birth" type="date" required defaultValue={dateOfBirth || ""} />
-      </label>
-      <label className="field">
-        <span>FIDE ID <span className="small">(optional)</span></span>
-        <input className="input" name="fide_id" maxLength={32} defaultValue={fideId || ""} placeholder="e.g. 1234567" />
-      </label>
-      <label className="field">
-        <span>Phone number <span className="small">(optional)</span></span>
-        <input className="input" name="phone" type="tel" maxLength={32} defaultValue={phone || ""} placeholder="e.g. +961 3 123 456" />
-      </label>
-      {message ? <div className="small" style={{ marginBottom: 8 }}>{message}</div> : null}
-      <button className="btn" type="submit" disabled={pending}>{pending ? "Saving…" : "Save profile"}</button>
-    </form>
+    <>
+      <form onSubmit={handleSubmit}>
+        <label className="field">
+          <span>Full name</span>
+          <input className="input" value={fullName} readOnly disabled />
+          <span className="small">Your name is managed by Shamieh Chess and cannot be edited here.</span>
+        </label>
+        <label className="field">
+          <span>Date of birth</span>
+          <input className="input" name="date_of_birth" type="date" required defaultValue={dateOfBirth || ""} />
+        </label>
+        <label className="field">
+          <span>FIDE ID <span className="small">(optional)</span></span>
+          <input className="input" name="fide_id" maxLength={32} defaultValue={fideId || ""} placeholder="e.g. 1234567" />
+        </label>
+        <label className="field">
+          <span>Phone number <span className="small">(optional)</span></span>
+          <input className="input" name="phone" type="tel" maxLength={32} defaultValue={phone || ""} placeholder="e.g. +961 3 123 456" />
+        </label>
+        {message ? <div className="small" style={{ marginBottom: 8 }}>{message}</div> : null}
+        <button className="btn" type="submit" disabled={pending}>{pending ? "Saving…" : "Save profile"}</button>
+      </form>
+
+      <div style={{ borderTop: "1px solid rgba(127,127,127,.25)", marginTop: 22, paddingTop: 18 }}>
+        <h3 style={{ marginTop: 0, marginBottom: 4 }}>Change password</h3>
+        <p className="small" style={{ marginTop: 0 }}>
+          Enter your current password, then choose and confirm your new password.
+        </p>
+        <StudentPasswordForm />
+      </div>
+    </>
   );
 }
