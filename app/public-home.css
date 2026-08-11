@@ -1,5 +1,5 @@
 /* Photo-led public homepage additions. Kept separate from portal styles. */
-.public-text-link{color:#f0d498;font-weight:800;padding:10px 4px}.public-text-link:hover{color:#fff}
+.public-text-link{color:#f0d498;font-weight:800;padding:10px 4px}.public-text-link:hover{color:#fff}.public-header-join{background:#c89c4a;color:#142019;border:1px solid #c89c4a}.public-header-join:hover{background:#d7b468}
 
 .public-hero-media{margin:0;position:relative;z-index:2;min-height:470px;border-radius:24px;overflow:hidden;box-shadow:0 28px 60px rgba(0,0,0,.28);background:#0d251c}.public-hero-media img{display:block;width:100%;height:470px;object-fit:cover;object-position:center}.public-hero-media:after{content:"";position:absolute;inset:auto 0 0;height:42%;background:linear-gradient(transparent,rgba(7,20,15,.78));pointer-events:none}.public-hero-media figcaption{position:absolute;left:22px;right:22px;bottom:20px;z-index:2;color:#fff;font-size:14px;font-weight:800;line-height:1.45}
 
@@ -20,9 +20,14 @@
 }
 
 @media(max-width:760px){
-  .public-hero-media{min-height:280px;border-radius:18px}.public-hero-media img{height:280px}.public-hero-media figcaption{left:16px;right:16px;bottom:14px;font-size:12px}
+  .public-header{align-items:center}.public-nav{flex-wrap:nowrap}.public-nav .public-header-join{display:inline-block}.public-nav .btn{white-space:nowrap}
+  .public-hero{padding-top:36px;padding-bottom:36px}.public-hero h1{font-size:clamp(38px,12vw,48px);line-height:1}.public-hero-media{min-height:280px;border-radius:18px}.public-hero-media img{height:280px}.public-hero-media figcaption{left:16px;right:16px;bottom:14px;font-size:12px}
   .public-academy-story{gap:26px}.public-story-media,.public-story-media img{height:280px;min-height:280px;border-radius:18px}.public-story-copy .public-lead{font-size:17px}.public-story-copy h2{font-size:38px}
   .public-community-band{margin:0 14px 30px;border-radius:22px}.public-community-photo,.public-community-photo img{min-height:300px;height:300px}.public-community-copy{padding:32px 24px}.public-community-copy h2{font-size:36px}
   .public-tournament-intro{gap:26px}.public-tournament-photo,.public-tournament-photo img{height:280px;min-height:280px;border-radius:18px}
   .public-text-link{width:100%;padding-left:0}
+}
+
+@media(max-width:430px){
+  .public-logo .shamieh-logo{width:128px}.public-header{padding-left:12px;padding-right:12px;gap:8px}.public-nav{gap:6px}.public-nav .btn{padding:8px 9px;font-size:11px;border-radius:8px}.public-hero{margin:10px;padding-left:20px;padding-right:20px}.public-actions>.btn{width:100%;text-align:center}.public-cta .public-actions>.btn{width:100%}.public-location-card{padding:24px 20px}.public-community-copy{padding:28px 20px}
 }
