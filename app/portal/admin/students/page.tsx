@@ -38,7 +38,7 @@ export default async function AdminStudentsPage({
 
   const [studentsResult, pendingResult, classesResult, enrollmentsResult] = await Promise.all([
     supabase.from("profiles").select("id, full_name, date_of_birth, fide_id, phone, created_at, frozen, frozen_at").eq("role", "student").eq("approved", true).order("full_name"),
-    supabase.from("profiles").select("id, full_name, date_of_birth, fide_id, phone, created_at").eq("role", "student").eq("approved", false).order("created_at"),
+    supabase.from("profiles").select("id, full_name, date_of_birth, fide_id, phone, created_at, preferred_branch:branches(name)").eq("role", "student").eq("approved", false).order("created_at"),
     supabase
       .from("classes")
       .select("id, name, branch:branches(name), level:levels(name, sort_order)")
@@ -142,7 +142,7 @@ export default async function AdminStudentsPage({
         <div className="row">
           <div>
             <h2 style={{ marginBottom: 4 }}>Pending registrations</h2>
-            <div className="small">Students who register themselves appear here. Review their date of birth, optional FIDE ID and phone, then choose their class.</div>
+            <div className="small">Students who register themselves appear here. Review their preferred location and details, then choose their class.</div>
           </div>
           <span className="pill">{pendingStudents.length} pending</span>
         </div>
@@ -155,6 +155,7 @@ export default async function AdminStudentsPage({
               <div className="card" key={student.id} style={{ boxShadow: "none" }}>
                 <div>
                   <h3 style={{ marginBottom: 6 }}>{student.full_name}</h3>
+                  <div className="small">Preferred location: <b>{student.preferred_branch?.name || "Not selected"}</b></div>
                   <div className="small">Date of birth: <b>{formatBirthDate(student.date_of_birth)}</b></div>
                   <div className="small">FIDE ID: <b>{student.fide_id || "Not provided"}</b></div>
                   <div className="small">Phone: <b>{student.phone || "Not provided"}</b></div>
