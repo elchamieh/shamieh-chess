@@ -1,7 +1,15 @@
 "use server";
 
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+
+async function getRequestOrigin() {
+  const requestHeaders = await headers();
+  const host = requestHeaders.get("x-forwarded-host") || requestHeaders.get("host");
+  const protocol = requestHeaders.get("x-forwarded-proto") || "https";
+  return host ? `${protocol}://${host}` : "https://shamieh-chess.vercel.app";
+}
 
 export async function registerStudent(formData: FormData) {
   const supabase = await createClient();
@@ -36,6 +44,7 @@ export async function registerStudent(formData: FormData) {
     redirect("/register?error=invalid_branch");
   }
 
+  const origin = await getRequestOrigin();
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
@@ -47,7 +56,7 @@ export async function registerStudent(formData: FormData) {
         fide_id: fide_id || null,
         phone: phone || null,
       },
-      emailRedirectTo: "https://app.shamiehchess.com/login",
+      emailRedirectTo: `${origin}/login`,
     },
   });
 
