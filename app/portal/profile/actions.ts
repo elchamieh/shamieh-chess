@@ -50,3 +50,47 @@ export async function updateStudentProfile(input: { dateOfBirth: string; fideId?
   revalidatePath("/portal/admin/students");
   return { ok: true };
 }
+
+export async function changeStudentPassword(input: {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user?.email) return { ok: false, error: "Please sign in again." };
+
+  const currentPassword = String(input.currentPassword || "");
+  const newPassword = String(input.newPassword || "");
+  const confirmPassword = String(input.confirmPassword || "");
+
+  if (!currentPassword) return { ok: false, error: "Enter your current password." };
+  if (newPassword.length < 8) return { ok: false, error: "The new password must be at least 8 characters." };
+  if (newPassword !== confirmPassword) return { ok: false, error: "The new passwords do not match." };
+  if (newPassword === currentPassword) return { ok: false, error: "Choose a new password different from your current password." };
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role, approved, frozen")
+    .eq("id", user.id)
+    .single();
+
+  if (profile?.role !== "student" || profile.approved !== true || profile.frozen === true) {
+    return { ok: false, error: "Your password cannot be changed right now." };
+  }
+
+  const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+    email: user.email,
+    password: currentPassword,
+  });
+
+  if (signInError || signInData.user?.id !== user.id) {
+    return { ok: false, error: "Your current password is incorrect." };
+  }
+
+  const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
+  if (updateError) return { ok: false, error: updateError.message };
+
+  return { ok: true };
+}
