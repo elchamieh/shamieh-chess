@@ -89,11 +89,12 @@ export default async function StudentDashboard({ profile }: { profile: any }) {
       <div className="grid">
         <div className="card span6">
           <h2>My Profile</h2>
-          <p className="small">You can update your date of birth and FIDE ID. Your name cannot be changed from the student portal.</p>
+          <p className="small">You can update your date of birth, FIDE ID, and phone number. Your name cannot be changed from the student portal.</p>
           <StudentProfileForm
             fullName={profile.full_name}
             dateOfBirth={profile.date_of_birth}
             fideId={profile.fide_id}
+            phone={profile.phone}
           />
         </div>
 
