@@ -3,13 +3,14 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 
-export async function updateStudentProfile(input: { dateOfBirth: string; fideId?: string }) {
+export async function updateStudentProfile(input: { dateOfBirth: string; fideId?: string; phone?: string }) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: "Please sign in again." };
 
   const dateOfBirth = String(input.dateOfBirth || "").trim();
   const fideId = String(input.fideId || "").trim();
+  const phone = String(input.phone || "").trim();
   const today = new Date().toISOString().slice(0, 10);
 
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dateOfBirth) || dateOfBirth < "1900-01-01" || dateOfBirth > today) {
@@ -17,6 +18,7 @@ export async function updateStudentProfile(input: { dateOfBirth: string; fideId?
   }
 
   if (fideId.length > 32) return { ok: false, error: "FIDE ID is too long." };
+  if (phone.length > 32) return { ok: false, error: "Phone number is too long." };
 
   const { data: profile } = await supabase
     .from("profiles")
@@ -39,7 +41,7 @@ export async function updateStudentProfile(input: { dateOfBirth: string; fideId?
 
   const { error } = await supabase
     .from("profiles")
-    .update({ date_of_birth: dateOfBirth, fide_id: fideId || null })
+    .update({ date_of_birth: dateOfBirth, fide_id: fideId || null, phone: phone || null })
     .eq("id", user.id);
 
   if (error) return { ok: false, error: error.message };
