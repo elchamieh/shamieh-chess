@@ -1,5 +1,6 @@
 import PortalShell from "./PortalShell";
 import StudentHomeworkSubmissionForm from "./StudentHomeworkSubmissionForm";
+import StudentProfileForm from "./StudentProfileForm";
 import { createClient } from "@/lib/supabase/server";
 import { createHomeworkDownloadUrl } from "@/lib/homework-files";
 import { registerForTournament } from "@/app/portal/tournaments/actions";
@@ -87,6 +88,16 @@ export default async function StudentDashboard({ profile }: { profile: any }) {
     <PortalShell title={`Welcome, ${profile.full_name}`} role="Student">
       <div className="grid">
         <div className="card span6">
+          <h2>My Profile</h2>
+          <p className="small">You can update your date of birth and FIDE ID. Your name cannot be changed from the student portal.</p>
+          <StudentProfileForm
+            fullName={profile.full_name}
+            dateOfBirth={profile.date_of_birth}
+            fideId={profile.fide_id}
+          />
+        </div>
+
+        <div className="card span6">
           <h2>Your Class</h2>
           {!enrollment ? (
             <p className="small">You have not been placed into an active class yet.</p>
@@ -106,7 +117,7 @@ export default async function StudentDashboard({ profile }: { profile: any }) {
           )}
         </div>
 
-        <div className="card span6">
+        <div className="card span12">
           <h2>Homework</h2>
           {!enrollment ? (
             <p className="small">Homework will appear after class placement.</p>
