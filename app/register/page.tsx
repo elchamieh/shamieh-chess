@@ -1,4 +1,5 @@
 import Link from "next/link";
+import ShamiehLogo from "@/components/ShamiehLogo";
 import { registerStudent } from "./actions";
 
 export default async function RegisterPage({
@@ -11,6 +12,7 @@ export default async function RegisterPage({
   return (
     <main className="login">
       <div className="card login-card">
+        <ShamiehLogo className="login-logo" />
         <span className="pill">Student Registration</span>
         <h1 style={{ marginTop: 14 }}>Join Shamieh Chess</h1>
         <p className="small">
