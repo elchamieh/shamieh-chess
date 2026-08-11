@@ -1,7 +1,23 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import ShamiehLogo from "@/components/ShamiehLogo";
 import { createClient } from "@/lib/supabase/server";
 import { registerPublicTournament } from "./actions";
+
+export const metadata: Metadata = {
+  title: "Chess Tournaments in Lebanon",
+  description:
+    "Upcoming Shamieh Chess tournaments with dates, venues, fees, deadlines and public registration.",
+  alternates: {
+    canonical: "/tournaments",
+  },
+  openGraph: {
+    url: "/tournaments",
+    title: "Chess Tournaments in Lebanon | Shamieh Chess Academy",
+    description: "Upcoming chess tournaments and public registration from Shamieh Chess Academy.",
+    images: ["/images/shamieh-achievements.webp"],
+  },
+};
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("en-GB", {
@@ -39,7 +55,7 @@ export default async function PublicTournamentsPage({
           <Link href="/#academy">Academy</Link>
           <Link href="/#locations">Saida & Beirut</Link>
           <Link href="/tournaments">Tournaments</Link>
-          <Link href="/register">Join the Academy</Link>
+          <Link href="/register" className="btn public-header-join">Join Academy</Link>
           <Link href="/login" className="btn secondary">Student Login</Link>
         </nav>
       </header>
