@@ -61,6 +61,13 @@ export default async function AdminDashboard({ profile }: { profile: any }) {
             </div>
             <div className="row">
               <div>
+                <b>Homework</b>
+                <div className="small">See all class rosters, coach homework, and the students receiving each assignment</div>
+              </div>
+              <Link className="btn" href="/portal/admin/homework">View</Link>
+            </div>
+            <div className="row">
+              <div>
                 <b>Tournaments</b>
                 <div className="small">Create events, open or close registration, and view student registrations</div>
               </div>
