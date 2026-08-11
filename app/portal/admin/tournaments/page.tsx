@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import PortalShell from "@/components/PortalShell";
 import { createClient } from "@/lib/supabase/server";
-import { createTournament, setTournamentRegistration } from "./actions";
+import { createTournament, deleteTournament, setTournamentRegistration, updateTournament } from "./actions";
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("en-GB", {
@@ -12,7 +12,30 @@ function formatDate(value: string) {
   }).format(new Date(value));
 }
 
-export default async function AdminTournamentsPage({ searchParams }: { searchParams: Promise<{ created?: string; error?: string }> }) {
+function toBeirutInputValue(value: string | null) {
+  if (!value) return "";
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Beirut",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(new Date(value));
+
+  const get = (type: string) => parts.find((part) => part.type === type)?.value || "";
+  return `${get("year")}-${get("month")}-${get("day")}T${get("hour")}:${get("minute")}`;
+}
+
+function formatFee(amount: number | string | null, currency: string | null) {
+  if (amount === null || Number(amount) === 0) return "Free";
+  const numericAmount = Number(amount);
+  if (currency === "LBP") return `${new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(numericAmount)} LBP`;
+  return `$${new Intl.NumberFormat("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(numericAmount)}`;
+}
+
+export default async function AdminTournamentsPage({ searchParams }: { searchParams: Promise<{ created?: string; updated?: string; deleted?: string; error?: string }> }) {
   const params = await searchParams;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -29,7 +52,7 @@ export default async function AdminTournamentsPage({ searchParams }: { searchPar
     supabase.from("branches").select("id, name").order("name"),
     supabase
       .from("tournaments")
-      .select("id, title, venue, starts_at, registration_deadline, description, open_for_registration, branch:branches(name)")
+      .select("id, title, branch_id, venue, starts_at, registration_deadline, description, fee_amount, fee_currency, open_for_registration, branch:branches(name)")
       .order("starts_at", { ascending: false }),
     supabase
       .from("tournament_registrations")
@@ -51,6 +74,8 @@ export default async function AdminTournamentsPage({ searchParams }: { searchPar
       </div>
 
       {params.created ? <div className="card" style={{ marginBottom: 18 }}><b>Tournament created.</b></div> : null}
+      {params.updated ? <div className="card" style={{ marginBottom: 18 }}><b>Tournament updated.</b></div> : null}
+      {params.deleted ? <div className="card" style={{ marginBottom: 18 }}><b>Tournament deleted.</b></div> : null}
       {params.error ? <div className="card" style={{ marginBottom: 18 }}><b>Could not complete action:</b> {decodeURIComponent(params.error)}</div> : null}
 
       <div className="grid">
@@ -81,6 +106,19 @@ export default async function AdminTournamentsPage({ searchParams }: { searchPar
               <span>Registration deadline</span>
               <input className="input" name="registration_deadline" type="datetime-local" />
             </label>
+            <div className="row" style={{ alignItems: "end" }}>
+              <label className="field" style={{ flex: 1 }}>
+                <span>Fee</span>
+                <input className="input" name="fee_amount" type="number" min="0" step="0.01" placeholder="Leave blank for free" />
+              </label>
+              <label className="field" style={{ width: 110 }}>
+                <span>Currency</span>
+                <select className="input" name="fee_currency" defaultValue="USD">
+                  <option value="USD">USD</option>
+                  <option value="LBP">LBP</option>
+                </select>
+              </label>
+            </div>
             <label className="field">
               <span>Description</span>
               <textarea className="input" name="description" rows={4} placeholder="Format, eligibility, notes..." />
@@ -107,18 +145,73 @@ export default async function AdminTournamentsPage({ searchParams }: { searchPar
                           {tournament.branch?.name ? ` · ${tournament.branch.name}` : ""}
                           {tournament.venue ? ` · ${tournament.venue}` : ""}
                         </div>
+                        <div className="small" style={{ marginTop: 4 }}>Fee: {formatFee(tournament.fee_amount, tournament.fee_currency)}</div>
                         {tournament.registration_deadline ? <div className="small" style={{ marginTop: 4 }}>Registration deadline: {formatDate(tournament.registration_deadline)}</div> : null}
                       </div>
-                      <form action={setTournamentRegistration}>
-                        <input type="hidden" name="tournament_id" value={tournament.id} />
-                        <input type="hidden" name="open_for_registration" value={tournament.open_for_registration ? "false" : "true"} />
-                        <button className={`btn ${tournament.open_for_registration ? "secondary" : ""}`} type="submit">
-                          {tournament.open_for_registration ? "Close registration" : "Open registration"}
-                        </button>
-                      </form>
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                        <form action={setTournamentRegistration}>
+                          <input type="hidden" name="tournament_id" value={tournament.id} />
+                          <input type="hidden" name="open_for_registration" value={tournament.open_for_registration ? "false" : "true"} />
+                          <button className={`btn ${tournament.open_for_registration ? "secondary" : ""}`} type="submit">
+                            {tournament.open_for_registration ? "Close registration" : "Open registration"}
+                          </button>
+                        </form>
+                        <form action={deleteTournament}>
+                          <input type="hidden" name="tournament_id" value={tournament.id} />
+                          <button className="btn secondary" type="submit">Delete</button>
+                        </form>
+                      </div>
                     </div>
 
                     {tournament.description ? <p>{tournament.description}</p> : null}
+
+                    <details style={{ marginTop: 14 }}>
+                      <summary style={{ cursor: "pointer", fontWeight: 700 }}>Edit tournament</summary>
+                      <form action={updateTournament} style={{ marginTop: 14 }}>
+                        <input type="hidden" name="tournament_id" value={tournament.id} />
+                        <div className="grid">
+                          <label className="field span6">
+                            <span>Title</span>
+                            <input className="input" name="title" required defaultValue={tournament.title} />
+                          </label>
+                          <label className="field span6">
+                            <span>Branch</span>
+                            <select className="input" name="branch_id" defaultValue={tournament.branch_id || ""}>
+                              <option value="">No specific branch</option>
+                              {(branches || []).map((branch) => <option key={branch.id} value={branch.id}>{branch.name}</option>)}
+                            </select>
+                          </label>
+                          <label className="field span6">
+                            <span>Venue</span>
+                            <input className="input" name="venue" defaultValue={tournament.venue || ""} />
+                          </label>
+                          <label className="field span6">
+                            <span>Starts</span>
+                            <input className="input" name="starts_at" type="datetime-local" required defaultValue={toBeirutInputValue(tournament.starts_at)} />
+                          </label>
+                          <label className="field span6">
+                            <span>Registration deadline</span>
+                            <input className="input" name="registration_deadline" type="datetime-local" defaultValue={toBeirutInputValue(tournament.registration_deadline)} />
+                          </label>
+                          <label className="field span3">
+                            <span>Fee</span>
+                            <input className="input" name="fee_amount" type="number" min="0" step="0.01" defaultValue={tournament.fee_amount ?? ""} placeholder="Free" />
+                          </label>
+                          <label className="field span3">
+                            <span>Currency</span>
+                            <select className="input" name="fee_currency" defaultValue={tournament.fee_currency || "USD"}>
+                              <option value="USD">USD</option>
+                              <option value="LBP">LBP</option>
+                            </select>
+                          </label>
+                          <label className="field span12">
+                            <span>Description</span>
+                            <textarea className="input" name="description" rows={4} defaultValue={tournament.description || ""} />
+                          </label>
+                        </div>
+                        <button className="btn" type="submit">Save changes</button>
+                      </form>
+                    </details>
 
                     <div style={{ marginTop: 14 }}>
                       <b>{eventRegistrations.length} registration{eventRegistrations.length === 1 ? "" : "s"}</b>
