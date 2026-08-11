@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const PUBLIC_HOST = "shamiehchess.com";
+const PUBLIC_HOST = "www.shamiehchess.com";
+const APEX_HOST = "shamiehchess.com";
 const APP_HOST = "app.shamiehchess.com";
 
 const APP_ONLY_PATHS = [
@@ -20,7 +21,8 @@ export function middleware(request: NextRequest) {
   const hostname = (request.headers.get("host") || "").split(":")[0].toLowerCase();
   const { pathname, search } = request.nextUrl;
 
-  if (hostname === `www.${PUBLIC_HOST}`) {
+  // Keep the same canonical direction as Vercel: apex -> www.
+  if (hostname === APEX_HOST) {
     return NextResponse.redirect(`https://${PUBLIC_HOST}${pathname}${search}`);
   }
 
