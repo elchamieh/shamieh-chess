@@ -49,6 +49,11 @@ export default async function LoginPage({
         <div style={{ marginTop: 10, textAlign: "center" }}>
           <Link href="/register" className="small">New student? Register for approval</Link>
         </div>
+        <div style={{ marginTop: 12 }}>
+          <Link href="/" className="btn secondary" style={{ width: "100%", textAlign: "center" }}>
+            ← Back to main page
+          </Link>
+        </div>
       </div>
     </main>
   );
