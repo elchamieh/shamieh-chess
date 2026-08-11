@@ -14,15 +14,15 @@ export async function registerStudent(formData: FormData) {
   const today = new Date().toISOString().slice(0, 10);
 
   if (!full_name || !email || password.length < 8) {
-    redirect("/register?error=Please%20complete%20all%20required%20fields%20and%20use%20a%20password%20of%20at%20least%208%20characters");
+    redirect("/register?error=missing_fields");
   }
 
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date_of_birth) || date_of_birth < "1900-01-01" || date_of_birth > today) {
-    redirect("/register?error=Please%20enter%20a%20valid%20date%20of%20birth");
+    redirect("/register?error=invalid_birth_date");
   }
 
-  if (fide_id.length > 32) redirect("/register?error=FIDE%20ID%20is%20too%20long");
-  if (phone.length > 32) redirect("/register?error=Phone%20number%20is%20too%20long");
+  if (fide_id.length > 32) redirect("/register?error=fide_too_long");
+  if (phone.length > 32) redirect("/register?error=phone_too_long");
 
   const { data, error } = await supabase.auth.signUp({
     email,
@@ -39,11 +39,22 @@ export async function registerStudent(formData: FormData) {
   });
 
   if (error) {
-    redirect(`/register?error=${encodeURIComponent(error.message)}`);
+    const code = String((error as { code?: string }).code || "");
+    const message = error.message.toLowerCase();
+    if (code === "email_exists" || message.includes("already been registered") || message.includes("already registered")) {
+      redirect("/register?error=account_exists");
+    }
+    redirect("/register?error=registration_failed");
   }
 
-  // If email confirmation is disabled and signUp created a session, do not keep
-  // a pending applicant signed into the academy platform automatically.
+  // Supabase can intentionally return an obfuscated success response for an
+  // already-existing email. An empty identities array is the reliable signal
+  // that the person should sign in/reset instead of creating another request.
+  if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+    redirect("/register?error=account_exists");
+  }
+
+  // Pending applicants should never remain signed into the academy platform.
   if (data.session) await supabase.auth.signOut();
 
   redirect("/register?submitted=1");
