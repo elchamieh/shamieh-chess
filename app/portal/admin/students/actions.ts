@@ -11,11 +11,11 @@ async function requireAdmin() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role, approved")
+    .select("role, approved, frozen")
     .eq("id", user.id)
     .single();
 
-  if (profile?.role !== "admin" || profile?.approved !== true) redirect("/portal");
+  if (profile?.role !== "admin" || profile?.approved !== true || profile?.frozen === true) redirect("/portal");
   return supabase;
 }
 
@@ -25,9 +25,11 @@ export async function createStudent(formData: FormData) {
   const email = String(formData.get("email") || "").trim().toLowerCase();
   const password = String(formData.get("password") || "");
   const class_id = String(formData.get("class_id") || "");
+  const date_of_birth = String(formData.get("date_of_birth") || "").trim();
+  const fide_id = String(formData.get("fide_id") || "").trim();
 
   const { data, error } = await supabase.functions.invoke("admin-create-student", {
-    body: { full_name, email, password, class_id },
+    body: { full_name, email, password, class_id, date_of_birth, fide_id },
   });
 
   if (error || data?.error) {
@@ -50,12 +52,16 @@ export async function approveStudent(formData: FormData) {
   }
 
   const [{ data: student }, { data: targetClass }] = await Promise.all([
-    supabase.from("profiles").select("id, role, approved").eq("id", student_id).single(),
+    supabase.from("profiles").select("id, role, approved, date_of_birth").eq("id", student_id).single(),
     supabase.from("classes").select("id").eq("id", class_id).eq("active", true).single(),
   ]);
 
   if (!student || student.role !== "student" || student.approved || !targetClass) {
     redirect("/portal/admin/students?error=Invalid%20pending%20registration%20or%20class");
+  }
+
+  if (!student.date_of_birth) {
+    redirect("/portal/admin/students?error=Date%20of%20birth%20is%20required%20before%20approval");
   }
 
   const { data: existingEnrollment } = await supabase
@@ -81,7 +87,7 @@ export async function approveStudent(formData: FormData) {
 
   const { error: approvalError } = await supabase
     .from("profiles")
-    .update({ approved: true, approved_at: new Date().toISOString() })
+    .update({ approved: true, approved_at: new Date().toISOString(), frozen: false, frozen_at: null })
     .eq("id", student_id)
     .eq("approved", false);
 
@@ -140,4 +146,26 @@ export async function moveStudent(formData: FormData) {
   revalidatePath("/portal/admin/students");
   revalidatePath("/portal");
   redirect("/portal/admin/students?moved=1");
+}
+
+export async function manageStudentAccount(input: { studentId: string; action: "freeze" | "unfreeze" | "delete" }) {
+  const supabase = await requireAdmin();
+  const studentId = String(input.studentId || "").trim();
+  const action = input.action;
+  if (!studentId || !["freeze", "unfreeze", "delete"].includes(action)) {
+    return { ok: false, error: "Invalid student account action." };
+  }
+
+  const { data, error } = await supabase.functions.invoke("admin-manage-student", {
+    body: { student_id: studentId, action },
+  });
+
+  if (error || data?.error) {
+    return { ok: false, error: data?.error || error?.message || "Could not update student account." };
+  }
+
+  revalidatePath("/portal/admin/students");
+  revalidatePath("/portal");
+  revalidatePath("/portal/admin/homework");
+  return { ok: true };
 }
