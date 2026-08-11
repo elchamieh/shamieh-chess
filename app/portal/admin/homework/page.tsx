@@ -2,11 +2,20 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import PortalShell from "@/components/PortalShell";
 import { createClient } from "@/lib/supabase/server";
+import { createHomeworkDownloadUrl } from "@/lib/homework-files";
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("en-GB", {
     timeZone: "Asia/Beirut",
     dateStyle: "medium",
+  }).format(new Date(value));
+}
+
+function formatDateTime(value: string) {
+  return new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Beirut",
+    dateStyle: "medium",
+    timeStyle: "short",
   }).format(new Date(value));
 }
 
@@ -23,7 +32,7 @@ export default async function AdminHomeworkPage() {
 
   if (profile?.role !== "admin" || profile?.approved !== true) redirect("/portal");
 
-  const [{ data: classes }, { data: enrollments }, { data: homework }] = await Promise.all([
+  const [{ data: classes }, { data: enrollments }, { data: homework }, { data: submissions }] = await Promise.all([
     supabase
       .from("classes")
       .select("id, name, branch:branches(name), level:levels(name)")
@@ -35,8 +44,12 @@ export default async function AdminHomeworkPage() {
       .eq("active", true),
     supabase
       .from("homework")
-      .select("id, class_id, title, instructions, attachment_url, due_date, created_at, published, class:classes(id, name, branch:branches(name), level:levels(name))")
+      .select("id, class_id, title, instructions, attachment_url, attachment_path, attachment_name, due_date, created_at, published, class:classes(id, name, branch:branches(name), level:levels(name))")
       .order("created_at", { ascending: false }),
+    supabase
+      .from("homework_submissions")
+      .select("id, homework_id, student_id, file_path, file_name, submitted_at, student:profiles(id, full_name)")
+      .order("submitted_at", { ascending: false }),
   ]);
 
   const studentsByClass = new Map<string, any[]>();
@@ -44,6 +57,23 @@ export default async function AdminHomeworkPage() {
     const list = studentsByClass.get(enrollment.class_id) || [];
     if (enrollment.student) list.push(enrollment.student);
     studentsByClass.set(enrollment.class_id, list);
+  }
+
+  const homeworkWithDownloads = await Promise.all((homework || []).map(async (item: any) => ({
+    ...item,
+    attachment_download_url: await createHomeworkDownloadUrl(supabase, item.attachment_path),
+  })));
+
+  const submissionsWithDownloads = await Promise.all((submissions || []).map(async (item: any) => ({
+    ...item,
+    download_url: await createHomeworkDownloadUrl(supabase, item.file_path),
+  })));
+
+  const submissionsByHomework = new Map<string, any[]>();
+  for (const submission of submissionsWithDownloads) {
+    const list = submissionsByHomework.get(submission.homework_id) || [];
+    list.push(submission);
+    submissionsByHomework.set(submission.homework_id, list);
   }
 
   return (
@@ -85,14 +115,17 @@ export default async function AdminHomeworkPage() {
         </div>
 
         <div className="card span7">
-          <h2>Homework overview</h2>
-          <p className="small">See homework published by coaches and every student currently assigned to receive it.</p>
-          {!homework?.length ? (
+          <h2>Homework & submissions</h2>
+          <p className="small">See homework published by coaches, download the original files, and track each student submission.</p>
+          {!homeworkWithDownloads.length ? (
             <p className="small">No homework posted yet.</p>
           ) : (
             <div className="list">
-              {homework.map((item: any) => {
+              {homeworkWithDownloads.map((item: any) => {
                 const students = studentsByClass.get(item.class_id) || [];
+                const itemSubmissions = submissionsByHomework.get(item.id) || [];
+                const submissionByStudent = new Map(itemSubmissions.map((submission: any) => [submission.student_id, submission]));
+
                 return (
                   <div className="card" key={item.id} style={{ boxShadow: "none" }}>
                     <div className="row" style={{ alignItems: "flex-start" }}>
@@ -105,29 +138,47 @@ export default async function AdminHomeworkPage() {
                           Posted {formatDate(item.created_at)}{item.due_date ? ` · Due ${item.due_date}` : ""}
                         </div>
                       </div>
-                      <span className="pill">{students.length} assigned</span>
+                      <span className="pill">{itemSubmissions.length}/{students.length} submitted</span>
                     </div>
 
                     {item.instructions ? <p>{item.instructions}</p> : null}
 
                     <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
+                      {item.attachment_download_url ? (
+                        <a className="btn secondary" href={item.attachment_download_url}>Download {item.attachment_name || "homework file"}</a>
+                      ) : null}
                       {item.attachment_url ? (
-                        <a className="btn secondary" href={item.attachment_url} target="_blank" rel="noreferrer">Open resource</a>
+                        <a className="btn secondary" href={item.attachment_url} target="_blank" rel="noreferrer">Open resource link</a>
                       ) : null}
                       <span className="pill">{item.published ? "Published" : "Draft"}</span>
                     </div>
 
-                    <details style={{ marginTop: 14 }}>
+                    <details style={{ marginTop: 14 }} open>
                       <summary style={{ cursor: "pointer", fontWeight: 700 }}>
-                        Students receiving this homework ({students.length})
+                        Student submissions ({itemSubmissions.length}/{students.length})
                       </summary>
                       {!students.length ? (
                         <div className="small" style={{ marginTop: 8 }}>No active students are currently in this class.</div>
                       ) : (
-                        <div className="list" style={{ gap: 4, marginTop: 8 }}>
-                          {students.map((student: any) => (
-                            <div className="small" key={student.id}>• {student.full_name}</div>
-                          ))}
+                        <div className="list" style={{ marginTop: 8 }}>
+                          {students.map((student: any) => {
+                            const submission: any = submissionByStudent.get(student.id);
+                            return (
+                              <div className="row" key={student.id}>
+                                <div>
+                                  <b>{student.full_name}</b>
+                                  <div className="small">
+                                    {submission ? `Submitted ${formatDateTime(submission.submitted_at)} · ${submission.file_name}` : "Not submitted yet"}
+                                  </div>
+                                </div>
+                                {submission?.download_url ? (
+                                  <a className="btn secondary" href={submission.download_url}>Download submission</a>
+                                ) : (
+                                  <span className="pill">Not submitted</span>
+                                )}
+                              </div>
+                            );
+                          })}
                         </div>
                       )}
                     </details>
