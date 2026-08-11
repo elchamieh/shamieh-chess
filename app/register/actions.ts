@@ -8,6 +8,7 @@ export async function registerStudent(formData: FormData) {
   const full_name = String(formData.get("full_name") || "").trim();
   const date_of_birth = String(formData.get("date_of_birth") || "").trim();
   const fide_id = String(formData.get("fide_id") || "").trim();
+  const phone = String(formData.get("phone") || "").trim();
   const email = String(formData.get("email") || "").trim().toLowerCase();
   const password = String(formData.get("password") || "");
   const today = new Date().toISOString().slice(0, 10);
@@ -21,6 +22,7 @@ export async function registerStudent(formData: FormData) {
   }
 
   if (fide_id.length > 32) redirect("/register?error=FIDE%20ID%20is%20too%20long");
+  if (phone.length > 32) redirect("/register?error=Phone%20number%20is%20too%20long");
 
   const { data, error } = await supabase.auth.signUp({
     email,
@@ -30,6 +32,7 @@ export async function registerStudent(formData: FormData) {
         full_name,
         date_of_birth,
         fide_id: fide_id || null,
+        phone: phone || null,
       },
       emailRedirectTo: "https://shamieh-chess.vercel.app/login",
     },
