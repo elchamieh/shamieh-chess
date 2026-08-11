@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import AdminDashboard from "@/components/AdminDashboard";
 import CoachDashboard from "@/components/CoachDashboard";
 import StudentDashboard from "@/components/StudentDashboard";
+import ShamiehLogo from "@/components/ShamiehLogo";
 
 export default async function PortalPage() {
   const supabase = await createClient();
@@ -16,13 +17,21 @@ export default async function PortalPage() {
     .single();
 
   if (!profile) {
-    return <main className="page"><div className="card">Profile not configured yet.</div></main>;
+    return (
+      <main className="login">
+        <div className="card login-card">
+          <ShamiehLogo className="login-logo" />
+          <div>Profile not configured yet.</div>
+        </div>
+      </main>
+    );
   }
 
   if (!profile.approved) {
     return (
       <main className="login">
         <div className="card login-card">
+          <ShamiehLogo className="login-logo" />
           <span className="pill">Pending Approval</span>
           <h1 style={{ marginTop: 14 }}>Registration received</h1>
           <p>Your account has been created, but academy access is not active yet.</p>
