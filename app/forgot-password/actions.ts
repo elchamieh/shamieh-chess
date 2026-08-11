@@ -9,7 +9,7 @@ export async function requestPasswordReset(formData: FormData) {
 
   const supabase = await createClient();
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: "https://shamieh-chess.vercel.app/auth/callback?next=/reset-password",
+    redirectTo: "https://app.shamiehchess.com/auth/callback?next=/reset-password",
   });
 
   if (error) {
