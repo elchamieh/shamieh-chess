@@ -5,10 +5,11 @@ import { createClient } from "@/lib/supabase/server";
 import {
   formatClock,
   getBeirutIsoDate,
+  getCurrentMonthBounds,
   getCurrentMonthLabel,
   getRemainingTrainingSessions,
   modeLabel,
-  type TrainingScheduleRow,
+  type TrainingSessionRow,
 } from "@/lib/training-schedule";
 
 export default async function StudentSchedulePage() {
@@ -33,19 +34,20 @@ export default async function StudentSchedulePage() {
 
   const classInfo: any = enrollment?.class;
   const today = getBeirutIsoDate();
-  let scheduleRows: TrainingScheduleRow[] = [];
+  const { last: monthEnd } = getCurrentMonthBounds();
+  let scheduleRows: TrainingSessionRow[] = [];
 
   if (enrollment?.class_id) {
     const { data } = await supabase
-      .from("training_schedules")
-      .select("id, class_id, delivery_mode, weekday, start_time, end_time, effective_from, effective_to")
+      .from("training_sessions")
+      .select("id, class_id, delivery_mode, session_date, start_time, end_time")
       .eq("class_id", enrollment.class_id)
       .eq("active", true)
-      .lte("effective_from", today)
-      .or(`effective_to.is.null,effective_to.gte.${today}`)
-      .order("weekday", { ascending: true })
+      .gte("session_date", today)
+      .lte("session_date", monthEnd)
+      .order("session_date", { ascending: true })
       .order("start_time", { ascending: true });
-    scheduleRows = (data || []) as TrainingScheduleRow[];
+    scheduleRows = (data || []) as TrainingSessionRow[];
   }
 
   const sessions = getRemainingTrainingSessions(scheduleRows);
@@ -73,7 +75,7 @@ export default async function StudentSchedulePage() {
               <h3 style={{ marginBottom: 6 }}>{classInfo?.name}</h3>
               <div className="small">{classInfo?.branch?.name} · {classInfo?.level?.name}</div>
               <p className="small" style={{ marginTop: 12, marginBottom: 0 }}>
-                This calendar is generated from the academy schedule assigned to your class. Live and online sessions are shown separately when their times differ.
+                These are the exact training dates published by the academy for your class. If the administrator changes a session, this page updates automatically.
               </p>
             </>
           )}
@@ -91,9 +93,7 @@ export default async function StudentSchedulePage() {
           {!enrollment ? (
             <p className="small">Training dates will appear after the academy places you into a class.</p>
           ) : !scheduleRows.length ? (
-            <p className="small">No training schedule has been published for your class for this month yet.</p>
-          ) : !sessions.length ? (
-            <p className="small">You have no remaining scheduled training sessions this month.</p>
+            <p className="small">No remaining training dates have been published for your class this month.</p>
           ) : (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: 12, marginTop: 18 }}>
               {sessions.map((session) => (
