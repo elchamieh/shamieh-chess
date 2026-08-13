@@ -61,6 +61,13 @@ export default async function AdminDashboard({ profile }: { profile: any }) {
             </div>
             <div className="row">
               <div>
+                <b>Attendance</b>
+                <div className="small">Review attendance submitted by coaches across all classes and months</div>
+              </div>
+              <Link className="btn" href="/portal/admin/attendance">View</Link>
+            </div>
+            <div className="row">
+              <div>
                 <b>Coaches & class access</b>
                 <div className="small">Create coach accounts and control which classes each coach can access</div>
               </div>
@@ -84,9 +91,9 @@ export default async function AdminDashboard({ profile }: { profile: any }) {
         </div>
 
         <div className="card span4">
-          <h2>Training dates</h2>
-          <p>Publish or change the exact training calendar for any Saida or Beirut class.</p>
-          <Link className="btn" href="/portal/admin/schedule">Manage schedule</Link>
+          <h2>Attendance</h2>
+          <p>See which sessions have been marked and review Present, Absent, and Excused records.</p>
+          <Link className="btn" href="/portal/admin/attendance">View attendance</Link>
         </div>
       </div>
     </PortalShell>
