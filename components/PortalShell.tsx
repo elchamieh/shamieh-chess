@@ -11,6 +11,7 @@ export default function PortalShell({title,role,children}:{title:string;role:str
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           {role === "Student" ? <Link className="btn secondary" href="/portal/schedule">My Schedule</Link> : null}
+          {role === "Coach" ? <Link className="btn secondary" href="/portal/coach/attendance">Attendance</Link> : null}
           <span className="pill">{role}</span>
         </div>
       </header>
