@@ -1,6 +1,8 @@
 import Link from "next/link";
 import ShamiehLogo from "@/components/ShamiehLogo";
+import PublicTrainingSchedule from "@/components/PublicTrainingSchedule";
 import { createClient } from "@/lib/supabase/server";
+import { getBeirutIsoDate } from "@/lib/training-schedule";
 import "./public-home.css";
 
 function formatDate(value: string) {
@@ -39,12 +41,22 @@ const levels = [
 
 export default async function HomePage() {
   const supabase = await createClient();
-  const { data: tournaments } = await supabase
-    .from("tournaments")
-    .select("id, title, starts_at, registration_deadline, venue, description, fee_amount, fee_currency, open_for_registration, branch:branches(name)")
-    .gte("starts_at", new Date().toISOString())
-    .order("starts_at", { ascending: true })
-    .limit(3);
+  const today = getBeirutIsoDate();
+  const [{ data: tournaments }, { data: trainingSchedules }] = await Promise.all([
+    supabase
+      .from("tournaments")
+      .select("id, title, starts_at, registration_deadline, venue, description, fee_amount, fee_currency, open_for_registration, branch:branches(name)")
+      .gte("starts_at", new Date().toISOString())
+      .order("starts_at", { ascending: true })
+      .limit(3),
+    supabase
+      .from("training_schedules")
+      .select("id, delivery_mode, weekday, start_time, end_time, effective_from, effective_to, branch:branches(name), level:levels(name, sort_order)")
+      .eq("active", true)
+      .lte("effective_from", today)
+      .or(`effective_to.is.null,effective_to.gte.${today}`)
+      .order("start_time", { ascending: true }),
+  ]);
 
   return (
     <main className="public-site">
@@ -53,6 +65,7 @@ export default async function HomePage() {
         <nav className="public-nav" aria-label="Main navigation">
           <a href="#academy">Academy</a>
           <a href="#locations">Saida & Beirut</a>
+          <a href="#schedule">Schedule</a>
           <Link href="/tournaments">Tournaments</Link>
           <Link href="/register" className="btn public-header-join">Join Academy</Link>
           <Link href="/login" className="btn secondary">Student Login</Link>
@@ -69,6 +82,7 @@ export default async function HomePage() {
           <div className="public-actions">
             <Link className="btn public-primary" href="/register">Join the Academy</Link>
             <Link className="btn secondary" href="/tournaments">View Tournaments</Link>
+            <a className="public-text-link" href="#schedule">Training times ↓</a>
             <Link className="public-text-link" href="/login">Student login →</Link>
           </div>
           <div className="public-quickfacts">
@@ -176,6 +190,8 @@ export default async function HomePage() {
         </div>
         <p className="public-location-note">Not sure which level is right? Register first and the academy can place the player in the appropriate class.</p>
       </section>
+
+      <PublicTrainingSchedule rows={(trainingSchedules || []) as any} />
 
       <section className="public-section public-tournaments" id="tournaments">
         <div className="public-tournament-intro">
