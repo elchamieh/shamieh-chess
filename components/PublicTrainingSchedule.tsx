@@ -1,34 +1,22 @@
 import {
   formatClock,
-  formatWeekdays,
-  getPublicScheduleSlots,
-  type TrainingScheduleRow,
+  formatDateList,
+  getCurrentMonthLabel,
+  getPublicSessionSlots,
+  type TrainingSessionRow,
 } from "@/lib/training-schedule";
-
-function scheduleMonthLabel(rows: TrainingScheduleRow[]) {
-  const firstDate = rows.map((row) => row.effective_from).sort()[0];
-  if (!firstDate) return "Current Training Schedule";
-  return new Intl.DateTimeFormat("en-GB", {
-    timeZone: "UTC",
-    month: "long",
-    year: "numeric",
-  }).format(new Date(`${firstDate}T12:00:00Z`));
-}
 
 function ModeSchedule({
   rows,
   branch,
   mode,
 }: {
-  rows: TrainingScheduleRow[];
+  rows: TrainingSessionRow[];
   branch: string;
   mode: "live" | "online";
 }) {
-  const slots = getPublicScheduleSlots(rows, branch, mode);
+  const slots = getPublicSessionSlots(rows, branch, mode);
   if (!slots.length) return null;
-
-  const branchModeRows = rows.filter((row) => row.branch?.name === branch && row.delivery_mode === mode);
-  const dayLabel = formatWeekdays(branchModeRows.map((row) => row.weekday));
 
   return (
     <div className={`public-schedule-mode public-schedule-${mode}`}>
@@ -37,15 +25,21 @@ function ModeSchedule({
           <span className="public-schedule-icon" aria-hidden="true">{mode === "live" ? "♟" : "◉"}</span>
           <div>
             <b>{mode === "live" ? "Inside Academy" : "Online Classes"}</b>
-            <span>{dayLabel}</span>
+            <span>Admin-published dates</span>
           </div>
         </div>
       </div>
       <div className="public-schedule-slots">
         {slots.map((slot) => (
-          <div className="public-schedule-slot" key={`${slot.level}-${slot.startTime}-${slot.endTime}`}>
-            <span>{slot.level}</span>
-            <b>{formatClock(slot.startTime)} – {formatClock(slot.endTime)}</b>
+          <div className="public-schedule-slot" key={`${slot.className}-${slot.startTime}-${slot.endTime}`}>
+            <div>
+              <span>{slot.level}</span>
+              {slot.className !== slot.level ? <small>{slot.className}</small> : null}
+            </div>
+            <div className="public-schedule-slot-details">
+              <b>{formatClock(slot.startTime)} – {formatClock(slot.endTime)}</b>
+              <small>{formatDateList(slot.dates)}</small>
+            </div>
           </div>
         ))}
       </div>
@@ -53,21 +47,21 @@ function ModeSchedule({
   );
 }
 
-export default function PublicTrainingSchedule({ rows }: { rows: TrainingScheduleRow[] }) {
+export default function PublicTrainingSchedule({ rows }: { rows: TrainingSessionRow[] }) {
   if (!rows.length) return null;
-  const monthLabel = scheduleMonthLabel(rows);
+  const monthLabel = getCurrentMonthLabel();
 
   return (
     <section className="public-section public-training-schedule" id="schedule">
       <div className="public-section-heading">
-        <span className="public-eyebrow">TRAINING TIMES</span>
-        <h2>{monthLabel} Training Schedule</h2>
-        <p>Choose the branch that works for you. Live and online training times are listed separately for Saida and Beirut.</p>
+        <span className="public-eyebrow">TRAINING SCHEDULE</span>
+        <h2>{monthLabel} Training Dates</h2>
+        <p>Exact dates and times are published by the academy for each class. Saida and Beirut are listed separately.</p>
       </div>
 
       <div className="public-schedule-branches">
         {(["Saida", "Beirut"] as const).map((branch, index) => {
-          const branchRows = rows.filter((row) => row.branch?.name === branch);
+          const branchRows = rows.filter((row) => row.class?.branch?.name === branch);
           if (!branchRows.length) return null;
           return (
             <article className="public-schedule-branch" key={branch}>
@@ -84,7 +78,7 @@ export default function PublicTrainingSchedule({ rows }: { rows: TrainingSchedul
           );
         })}
       </div>
-      <p className="public-schedule-note">Published schedule applies to the month shown above. Class placement determines the exact time a registered student should attend.</p>
+      <p className="public-schedule-note">The dates shown above are the official academy sessions published for the current month and may be updated by the administrator when needed.</p>
     </section>
   );
 }
