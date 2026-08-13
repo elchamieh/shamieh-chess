@@ -1,19 +1,16 @@
-export type TrainingScheduleRow = {
+export type TrainingSessionRow = {
   id?: string;
-  branch_id?: string;
-  level_id?: string;
   class_id?: string;
   delivery_mode: "live" | "online";
-  weekday: number;
+  session_date: string;
   start_time: string;
   end_time: string;
-  effective_from: string;
-  effective_to: string | null;
-  branch?: { name?: string | null } | null;
-  level?: { name?: string | null; sort_order?: number | null } | null;
+  class?: {
+    name?: string | null;
+    branch?: { name?: string | null } | null;
+    level?: { name?: string | null; sort_order?: number | null } | null;
+  } | null;
 };
-
-const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 export function formatClock(value: string) {
   const [hourRaw, minuteRaw] = value.split(":");
@@ -22,43 +19,6 @@ export function formatClock(value: string) {
   const suffix = hour >= 12 ? "pm" : "am";
   const displayHour = hour % 12 || 12;
   return `${displayHour}:${String(minute).padStart(2, "0")} ${suffix}`;
-}
-
-export function formatWeekdays(values: number[]) {
-  const names = [...new Set(values)].sort((a, b) => a - b).map((value) => WEEKDAYS[value] || "");
-  if (!names.length) return "";
-  if (names.length === 1) return `${names[0]}s`;
-  if (names.length === 2) return `${names[0]}s & ${names[1]}s`;
-  return `${names.slice(0, -1).map((name) => `${name}s`).join(", ")} & ${names[names.length - 1]}s`;
-}
-
-export function getPublicScheduleSlots(rows: TrainingScheduleRow[], branchName: string, mode: "live" | "online") {
-  const branchRows = rows.filter((row) => row.branch?.name === branchName && row.delivery_mode === mode);
-  const grouped = new Map<string, {
-    level: string;
-    levelOrder: number;
-    startTime: string;
-    endTime: string;
-    weekdays: number[];
-  }>();
-
-  for (const row of branchRows) {
-    const level = row.level?.name || "Training";
-    const key = `${level}|${row.start_time}|${row.end_time}`;
-    const current = grouped.get(key) || {
-      level,
-      levelOrder: row.level?.sort_order ?? 999,
-      startTime: row.start_time,
-      endTime: row.end_time,
-      weekdays: [],
-    };
-    current.weekdays.push(row.weekday);
-    grouped.set(key, current);
-  }
-
-  return [...grouped.values()]
-    .map((item) => ({ ...item, weekdays: [...new Set(item.weekdays)] }))
-    .sort((a, b) => a.levelOrder - b.levelOrder || a.startTime.localeCompare(b.startTime));
 }
 
 function getBeirutDateParts(date = new Date()) {
@@ -78,12 +38,66 @@ export function getBeirutIsoDate(date = new Date()) {
   return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
+export function getCurrentMonthBounds(date = new Date()) {
+  const { year, month } = getBeirutDateParts(date);
+  const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  return {
+    first: `${year}-${String(month).padStart(2, "0")}-01`,
+    last: `${year}-${String(month).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`,
+  };
+}
+
 export function getCurrentMonthLabel(date = new Date()) {
   return new Intl.DateTimeFormat("en-GB", {
     timeZone: "Asia/Beirut",
     month: "long",
     year: "numeric",
   }).format(date);
+}
+
+export function formatSessionDate(value: string, includeWeekday = true) {
+  return new Intl.DateTimeFormat("en-GB", {
+    timeZone: "UTC",
+    ...(includeWeekday ? { weekday: "short" as const } : {}),
+    day: "numeric",
+    month: "short",
+  }).format(new Date(`${value}T12:00:00Z`));
+}
+
+export function formatDateList(values: string[]) {
+  return [...new Set(values)].sort().map((value) => formatSessionDate(value)).join(" · ");
+}
+
+export function getPublicSessionSlots(rows: TrainingSessionRow[], branchName: string, mode: "live" | "online") {
+  const branchRows = rows.filter((row) => row.class?.branch?.name === branchName && row.delivery_mode === mode);
+  const grouped = new Map<string, {
+    level: string;
+    className: string;
+    levelOrder: number;
+    startTime: string;
+    endTime: string;
+    dates: string[];
+  }>();
+
+  for (const row of branchRows) {
+    const level = row.class?.level?.name || "Training";
+    const className = row.class?.name || level;
+    const key = `${className}|${row.start_time}|${row.end_time}`;
+    const current = grouped.get(key) || {
+      level,
+      className,
+      levelOrder: row.class?.level?.sort_order ?? 999,
+      startTime: row.start_time,
+      endTime: row.end_time,
+      dates: [],
+    };
+    current.dates.push(row.session_date);
+    grouped.set(key, current);
+  }
+
+  return [...grouped.values()]
+    .map((item) => ({ ...item, dates: [...new Set(item.dates)].sort() }))
+    .sort((a, b) => a.levelOrder - b.levelOrder || a.startTime.localeCompare(b.startTime) || a.className.localeCompare(b.className));
 }
 
 export type RemainingTrainingSession = {
@@ -94,47 +108,33 @@ export type RemainingTrainingSession = {
   modes: Array<"live" | "online">;
 };
 
-export function getRemainingTrainingSessions(rows: TrainingScheduleRow[], date = new Date()) {
-  const { year, month, day } = getBeirutDateParts(date);
-  const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
+export function getRemainingTrainingSessions(rows: TrainingSessionRow[], date = new Date()) {
+  const today = getBeirutIsoDate(date);
+  const { last } = getCurrentMonthBounds(date);
   const merged = new Map<string, RemainingTrainingSession>();
 
-  for (let currentDay = day; currentDay <= daysInMonth; currentDay += 1) {
-    const isoDate = `${year}-${String(month).padStart(2, "0")}-${String(currentDay).padStart(2, "0")}`;
-    const weekday = new Date(Date.UTC(year, month - 1, currentDay, 12)).getUTCDay();
-
-    for (const row of rows) {
-      if (row.weekday !== weekday) continue;
-      if (isoDate < row.effective_from) continue;
-      if (row.effective_to && isoDate > row.effective_to) continue;
-
-      const key = `${isoDate}|${row.start_time}|${row.end_time}`;
-      const existing = merged.get(key);
-      if (existing) {
-        if (!existing.modes.includes(row.delivery_mode)) existing.modes.push(row.delivery_mode);
-        continue;
-      }
-
-      const labelDate = new Date(`${isoDate}T12:00:00Z`);
-      merged.set(key, {
-        date: isoDate,
-        dateLabel: new Intl.DateTimeFormat("en-GB", {
-          timeZone: "UTC",
-          weekday: "short",
-          day: "numeric",
-          month: "short",
-        }).format(labelDate),
-        startTime: row.start_time,
-        endTime: row.end_time,
-        modes: [row.delivery_mode],
-      });
+  for (const row of rows) {
+    if (row.session_date < today || row.session_date > last) continue;
+    const key = `${row.session_date}|${row.start_time}|${row.end_time}`;
+    const existing = merged.get(key);
+    if (existing) {
+      if (!existing.modes.includes(row.delivery_mode)) existing.modes.push(row.delivery_mode);
+      continue;
     }
+
+    merged.set(key, {
+      date: row.session_date,
+      dateLabel: formatSessionDate(row.session_date),
+      startTime: row.start_time,
+      endTime: row.end_time,
+      modes: [row.delivery_mode],
+    });
   }
 
   return [...merged.values()].sort((a, b) => a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime));
 }
 
 export function modeLabel(modes: Array<"live" | "online">) {
-  if (modes.includes("live") && modes.includes("online")) return "Live + Online";
+  if (modes.includes("live") && modes.includes("online")) return "Inside Academy + Online";
   return modes[0] === "online" ? "Online" : "Inside Academy";
 }
