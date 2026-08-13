@@ -95,12 +95,25 @@ export default async function StudentSchedulePage() {
           ) : !sessions.length ? (
             <p className="small">You have no remaining scheduled training sessions this month.</p>
           ) : (
-            <div className="training-session-grid">
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: 12, marginTop: 18 }}>
               {sessions.map((session) => (
-                <article className="training-session-card" key={`${session.date}-${session.startTime}-${session.endTime}`}>
-                  <div className="training-session-date">{session.dateLabel}</div>
-                  <div className="training-session-time">{formatClock(session.startTime)} – {formatClock(session.endTime)}</div>
-                  <span className={`pill ${session.modes.length > 1 ? "training-mode-hybrid" : session.modes[0] === "online" ? "training-mode-online" : ""}`}>
+                <article
+                  className="card"
+                  key={`${session.date}-${session.startTime}-${session.endTime}`}
+                  style={{ boxShadow: "none", padding: 16, borderColor: session.modes[0] === "online" ? "#c9d8eb" : undefined }}
+                >
+                  <div className="small" style={{ fontWeight: 800, textTransform: "uppercase", letterSpacing: ".05em" }}>{session.dateLabel}</div>
+                  <div style={{ fontSize: 19, fontWeight: 800, margin: "9px 0 12px" }}>
+                    {formatClock(session.startTime)} – {formatClock(session.endTime)}
+                  </div>
+                  <span
+                    className="pill"
+                    style={session.modes.length > 1
+                      ? { background: "#ece5d5", color: "#654b18" }
+                      : session.modes[0] === "online"
+                        ? { background: "#e4edf8", color: "#194f85" }
+                        : undefined}
+                  >
                     {modeLabel(session.modes)}
                   </span>
                 </article>
