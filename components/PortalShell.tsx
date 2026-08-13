@@ -9,8 +9,8 @@ export default function PortalShell({title,role,children}:{title:string;role:str
           <ShamiehLogo className="topbar-logo" />
           <div className="small">Academy Platform</div>
         </div>
-        <div className="topbar-actions">
-          {role === "Student" ? <Link className="btn topbar-schedule-btn" href="/portal/schedule">My Schedule</Link> : null}
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          {role === "Student" ? <Link className="btn secondary" href="/portal/schedule">My Schedule</Link> : null}
           <span className="pill">{role}</span>
         </div>
       </header>
