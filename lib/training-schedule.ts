@@ -73,6 +73,11 @@ function getBeirutDateParts(date = new Date()) {
   return { year: read("year"), month: read("month"), day: read("day") };
 }
 
+export function getBeirutIsoDate(date = new Date()) {
+  const { year, month, day } = getBeirutDateParts(date);
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
 export function getCurrentMonthLabel(date = new Date()) {
   return new Intl.DateTimeFormat("en-GB", {
     timeZone: "Asia/Beirut",
