@@ -9,6 +9,8 @@
 
 .public-location-note{margin:18px 2px 0;color:#69736c;font-size:13px;line-height:1.6}
 
+.public-training-schedule{padding-top:44px}.public-schedule-branches{display:grid;grid-template-columns:1fr 1fr;gap:22px}.public-schedule-branch{background:#fff;border:1px solid #ded8c8;border-radius:24px;padding:26px;box-shadow:0 16px 36px rgba(26,47,37,.07)}.public-schedule-branch-title{display:flex;align-items:center;gap:15px;padding-bottom:18px;border-bottom:1px solid #e7e1d3}.public-schedule-branch-title>span{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;background:#183c2d;color:#e6c882;font-weight:900}.public-schedule-branch-title .public-eyebrow{margin:0 0 3px}.public-schedule-branch-title h3{font-size:30px;margin:0}.public-schedule-mode{margin-top:20px;border-radius:18px;background:#f6f3eb;border:1px solid #e5dfd0;overflow:hidden}.public-schedule-mode-heading{padding:15px 16px;background:#173c2d;color:#fff}.public-schedule-online .public-schedule-mode-heading{background:#153f77}.public-schedule-mode-heading>div{display:flex;align-items:center;gap:12px}.public-schedule-icon{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:#c89c4a;color:#10281f;font-size:19px;font-weight:900}.public-schedule-mode-heading b{display:block;font-size:16px}.public-schedule-mode-heading div div span{display:block;color:#d9e2dc;font-size:12px;margin-top:3px}.public-schedule-online .public-schedule-mode-heading div div span{color:#d9e7f7}.public-schedule-slots{padding:4px 16px}.public-schedule-slot{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:13px 0;border-bottom:1px solid #e2dccf}.public-schedule-slot:last-child{border-bottom:0}.public-schedule-slot>span{font-weight:800;color:#21392d}.public-schedule-slot>b{font-size:13px;color:#5f685f;white-space:nowrap}.public-schedule-note{margin:18px 2px 0;color:#69736c;font-size:13px;line-height:1.6}
+
 .public-tournament-intro{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);gap:48px;align-items:center;margin-bottom:42px}.public-tournament-intro .public-section-heading{margin:0}.public-tournament-intro .public-section-heading .btn{margin-top:10px}.public-tournament-photo{border-radius:24px;overflow:hidden;min-height:390px;box-shadow:0 18px 46px rgba(27,42,33,.12);background:#ddd8cc}.public-tournament-photo img{display:block;width:100%;height:390px;object-fit:cover;object-position:center 45%}
 
 @media(max-width:980px){
@@ -16,6 +18,7 @@
   .public-academy-story,.public-tournament-intro{grid-template-columns:1fr;gap:34px}
   .public-story-media,.public-story-media img{min-height:390px;height:390px}
   .public-community-band{margin-left:24px;margin-right:24px;grid-template-columns:1fr}.public-community-photo,.public-community-photo img{min-height:420px}.public-community-copy{padding:42px 34px}
+  .public-schedule-branches{grid-template-columns:1fr}
   .public-tournament-photo,.public-tournament-photo img{min-height:390px;height:390px}
 }
 
@@ -24,6 +27,7 @@
   .public-hero{padding-top:36px;padding-bottom:36px}.public-hero h1{font-size:clamp(38px,12vw,48px);line-height:1}.public-hero-media{min-height:280px;border-radius:18px}.public-hero-media img{height:280px}.public-hero-media figcaption{left:16px;right:16px;bottom:14px;font-size:12px}
   .public-academy-story{gap:26px}.public-story-media,.public-story-media img{height:280px;min-height:280px;border-radius:18px}.public-story-copy .public-lead{font-size:17px}.public-story-copy h2{font-size:38px}
   .public-community-band{margin:0 14px 30px;border-radius:22px}.public-community-photo,.public-community-photo img{min-height:300px;height:300px}.public-community-copy{padding:32px 24px}.public-community-copy h2{font-size:36px}
+  .public-schedule-branch{padding:20px}.public-schedule-slot{align-items:flex-start;flex-direction:column;gap:4px}.public-schedule-slot>b{white-space:normal}
   .public-tournament-intro{gap:26px}.public-tournament-photo,.public-tournament-photo img{height:280px;min-height:280px;border-radius:18px}
   .public-text-link{width:100%;padding-left:0}
 }
