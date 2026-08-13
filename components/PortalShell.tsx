@@ -1,3 +1,4 @@
+import Link from "next/link";
 import ShamiehLogo from "./ShamiehLogo";
 
 export default function PortalShell({title,role,children}:{title:string;role:string;children:React.ReactNode}) {
@@ -8,7 +9,10 @@ export default function PortalShell({title,role,children}:{title:string;role:str
           <ShamiehLogo className="topbar-logo" />
           <div className="small">Academy Platform</div>
         </div>
-        <div><span className="pill">{role}</span></div>
+        <div className="topbar-actions">
+          {role === "Student" ? <Link className="btn topbar-schedule-btn" href="/portal/schedule">My Schedule</Link> : null}
+          <span className="pill">{role}</span>
+        </div>
       </header>
       <section className="page"><h1>{title}</h1>{children}</section>
     </main>
