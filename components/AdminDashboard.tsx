@@ -54,6 +54,13 @@ export default async function AdminDashboard({ profile }: { profile: any }) {
             </div>
             <div className="row">
               <div>
+                <b>Training schedule</b>
+                <div className="small">Choose a class and publish the exact dates and times of its training sessions</div>
+              </div>
+              <Link className="btn" href="/portal/admin/schedule">Manage</Link>
+            </div>
+            <div className="row">
+              <div>
                 <b>Coaches & class access</b>
                 <div className="small">Create coach accounts and control which classes each coach can access</div>
               </div>
@@ -77,9 +84,9 @@ export default async function AdminDashboard({ profile }: { profile: any }) {
         </div>
 
         <div className="card span4">
-          <h2>Tournaments</h2>
-          <p>Create the next academy event and students will be able to register from their own dashboard.</p>
-          <Link className="btn" href="/portal/admin/tournaments">Create tournament</Link>
+          <h2>Training dates</h2>
+          <p>Publish or change the exact training calendar for any Saida or Beirut class.</p>
+          <Link className="btn" href="/portal/admin/schedule">Manage schedule</Link>
         </div>
       </div>
     </PortalShell>
