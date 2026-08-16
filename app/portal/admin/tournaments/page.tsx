@@ -33,11 +33,13 @@ function toBeirutInputValue(value: string | null) {
   return `${get("year")}-${get("month")}-${get("day")}T${get("hour")}:${get("minute")}`;
 }
 
-function formatFee(amount: number | string | null, currency: string | null) {
+function formatFee(amount: number | string | null, currency: string | null, registrationType?: string) {
   if (amount === null || Number(amount) === 0) return "Free";
   const numericAmount = Number(amount);
-  if (currency === "LBP") return `${new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(numericAmount)} LBP`;
-  return `$${new Intl.NumberFormat("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(numericAmount)}`;
+  const amountLabel = currency === "LBP"
+    ? `${new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(numericAmount)} LBP`
+    : `$${new Intl.NumberFormat("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(numericAmount)}`;
+  return registrationType === "team" ? `${amountLabel} / player` : amountLabel;
 }
 
 export default async function AdminTournamentsPage({ searchParams }: { searchParams: Promise<{ created?: string; updated?: string; deleted?: string; error?: string }> }) {
@@ -53,15 +55,19 @@ export default async function AdminTournamentsPage({ searchParams }: { searchPar
     .single();
   if (profile?.role !== "admin" || profile?.approved !== true) redirect("/portal");
 
-  const [{ data: branches }, { data: tournaments }, { data: registrations }] = await Promise.all([
+  const [{ data: branches }, { data: tournaments }, { data: registrations }, { data: teamRegistrations }] = await Promise.all([
     supabase.from("branches").select("id, name").order("name"),
     supabase
       .from("tournaments")
-      .select("id, title, branch_id, venue, starts_at, registration_deadline, description, fee_amount, fee_currency, open_for_registration, branch:branches(name)")
+      .select("id, title, branch_id, venue, starts_at, registration_deadline, description, fee_amount, fee_currency, open_for_registration, registration_type, branch:branches(name)")
       .order("starts_at", { ascending: false }),
     supabase
       .from("tournament_registrations")
       .select("id, tournament_id, student_id, registrant_name, registrant_email, registrant_phone, date_of_birth, fide_id, status, registered_at, student:profiles(id, full_name)")
+      .order("registered_at", { ascending: true }),
+    supabase
+      .from("team_tournament_registrations")
+      .select("id, tournament_id, team_name, contact_phone, contact_email, captain_board, player_1_name, player_1_fide_id, player_2_name, player_2_fide_id, player_3_name, player_3_fide_id, player_4_name, player_4_fide_id, status, registered_at")
       .order("registered_at", { ascending: true }),
   ]);
 
@@ -70,6 +76,13 @@ export default async function AdminTournamentsPage({ searchParams }: { searchPar
     const list = registrationsByTournament.get(registration.tournament_id) || [];
     list.push(registration);
     registrationsByTournament.set(registration.tournament_id, list);
+  }
+
+  const teamRegistrationsByTournament = new Map<string, any[]>();
+  for (const registration of teamRegistrations || []) {
+    const list = teamRegistrationsByTournament.get(registration.tournament_id) || [];
+    list.push(registration);
+    teamRegistrationsByTournament.set(registration.tournament_id, list);
   }
 
   return (
@@ -91,6 +104,13 @@ export default async function AdminTournamentsPage({ searchParams }: { searchPar
             <label className="field">
               <span>Title</span>
               <input className="input" name="title" required placeholder="Shamieh Chess Rapid" />
+            </label>
+            <label className="field">
+              <span>Registration type</span>
+              <select className="input" name="registration_type" defaultValue="individual">
+                <option value="individual">Individual players</option>
+                <option value="team">Teams (3 + optional 4th player)</option>
+              </select>
             </label>
             <label className="field">
               <span>Branch</span>
@@ -134,24 +154,30 @@ export default async function AdminTournamentsPage({ searchParams }: { searchPar
 
         <div className="card span8">
           <h2>Events & registrations</h2>
-          <p className="small">Registrations can now come from academy student accounts or directly from the public tournament page.</p>
+          <p className="small">Individual and team registrations from the public website appear here.</p>
           {!tournaments?.length ? (
             <p className="small">No tournaments created yet.</p>
           ) : (
             <div className="list">
               {tournaments.map((tournament: any) => {
-                const eventRegistrations = registrationsByTournament.get(tournament.id) || [];
+                const isTeam = tournament.registration_type === "team";
+                const eventRegistrations = isTeam
+                  ? (teamRegistrationsByTournament.get(tournament.id) || [])
+                  : (registrationsByTournament.get(tournament.id) || []);
                 return (
                   <div className="card" key={tournament.id} style={{ boxShadow: "none" }}>
                     <div className="row">
                       <div>
-                        <h3 style={{ marginBottom: 6 }}>{tournament.title}</h3>
+                        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                          <h3 style={{ marginBottom: 6 }}>{tournament.title}</h3>
+                          <span className="pill">{isTeam ? "Team event" : "Individual event"}</span>
+                        </div>
                         <div className="small">
                           {formatDate(tournament.starts_at)}
                           {tournament.branch?.name ? ` · ${tournament.branch.name}` : ""}
                           {tournament.venue ? ` · ${tournament.venue}` : ""}
                         </div>
-                        <div className="small" style={{ marginTop: 4 }}>Fee: {formatFee(tournament.fee_amount, tournament.fee_currency)}</div>
+                        <div className="small" style={{ marginTop: 4 }}>Fee: {formatFee(tournament.fee_amount, tournament.fee_currency, tournament.registration_type)}</div>
                         {tournament.registration_deadline ? <div className="small" style={{ marginTop: 4 }}>Registration deadline: {formatDate(tournament.registration_deadline)}</div> : null}
                       </div>
                       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
@@ -170,7 +196,7 @@ export default async function AdminTournamentsPage({ searchParams }: { searchPar
                       </div>
                     </div>
 
-                    {tournament.description ? <p>{tournament.description}</p> : null}
+                    {tournament.description ? <p style={{ whiteSpace: "pre-line" }}>{tournament.description}</p> : null}
 
                     <details style={{ marginTop: 14 }}>
                       <summary style={{ cursor: "pointer", fontWeight: 700 }}>Edit tournament</summary>
@@ -180,6 +206,13 @@ export default async function AdminTournamentsPage({ searchParams }: { searchPar
                           <label className="field span6">
                             <span>Title</span>
                             <input className="input" name="title" required defaultValue={tournament.title} />
+                          </label>
+                          <label className="field span6">
+                            <span>Registration type</span>
+                            <select className="input" name="registration_type" defaultValue={tournament.registration_type || "individual"}>
+                              <option value="individual">Individual players</option>
+                              <option value="team">Teams (3 + optional 4th)</option>
+                            </select>
                           </label>
                           <label className="field span6">
                             <span>Branch</span>
@@ -201,7 +234,7 @@ export default async function AdminTournamentsPage({ searchParams }: { searchPar
                             <input className="input" name="registration_deadline" type="datetime-local" defaultValue={toBeirutInputValue(tournament.registration_deadline)} />
                           </label>
                           <label className="field span3">
-                            <span>Fee</span>
+                            <span>Fee {isTeam ? "per player" : ""}</span>
                             <input className="input" name="fee_amount" type="number" min="0" step="0.01" defaultValue={tournament.fee_amount ?? ""} placeholder="Free" />
                           </label>
                           <label className="field span3">
@@ -213,7 +246,7 @@ export default async function AdminTournamentsPage({ searchParams }: { searchPar
                           </label>
                           <label className="field span12">
                             <span>Description</span>
-                            <textarea className="input" name="description" rows={4} defaultValue={tournament.description || ""} />
+                            <textarea className="input" name="description" rows={7} defaultValue={tournament.description || ""} />
                           </label>
                         </div>
                         <button className="btn" type="submit">Save changes</button>
@@ -221,9 +254,41 @@ export default async function AdminTournamentsPage({ searchParams }: { searchPar
                     </details>
 
                     <div style={{ marginTop: 14 }}>
-                      <b>{eventRegistrations.length} registration{eventRegistrations.length === 1 ? "" : "s"}</b>
+                      <b>{eventRegistrations.length} {isTeam ? "team" : "registration"}{eventRegistrations.length === 1 ? "" : "s"}</b>
                       {!eventRegistrations.length ? (
                         <div className="small" style={{ marginTop: 6 }}>No registrations yet.</div>
+                      ) : isTeam ? (
+                        <div className="list" style={{ marginTop: 8 }}>
+                          {eventRegistrations.map((registration: any) => {
+                            const players = [1, 2, 3, 4]
+                              .map((board) => ({
+                                board,
+                                name: registration[`player_${board}_name`],
+                                fide: registration[`player_${board}_fide_id`],
+                              }))
+                              .filter((player) => player.name);
+                            return (
+                              <div className="card" key={registration.id} style={{ boxShadow: "none", padding: 14 }}>
+                                <div className="row" style={{ alignItems: "flex-start" }}>
+                                  <div>
+                                    <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                                      <b>{registration.team_name}</b>
+                                      <span className="pill">Captain: Player {registration.captain_board}</span>
+                                    </div>
+                                    <div className="small" style={{ marginTop: 7, lineHeight: 1.7 }}>
+                                      Contact: <b>{registration.contact_phone}</b>{registration.contact_email ? <> · <b>{registration.contact_email}</b></> : null}<br />
+                                      {players.map((player) => (
+                                        <span key={player.board}>Board {player.board}: <b>{player.name}</b> · FIDE {player.fide}{player.board === registration.captain_board ? " · CAPTAIN" : ""}<br /></span>
+                                      ))}
+                                      Registered {formatDate(registration.registered_at)}
+                                    </div>
+                                  </div>
+                                  <span className="pill">{registration.status}</span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
                       ) : (
                         <div className="list" style={{ marginTop: 8 }}>
                           {eventRegistrations.map((registration: any) => {
