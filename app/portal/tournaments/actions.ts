@@ -21,11 +21,12 @@ export async function registerForTournament(formData: FormData) {
 
   const { data: tournament } = await supabase
     .from("tournaments")
-    .select("id, open_for_registration, registration_deadline")
+    .select("id, open_for_registration, registration_deadline, registration_type")
     .eq("id", tournament_id)
     .single();
 
   if (!tournament?.open_for_registration) return;
+  if (tournament.registration_type === "team") return;
   if (tournament.registration_deadline && new Date(tournament.registration_deadline) < new Date()) return;
 
   const { data: existing } = await supabase
