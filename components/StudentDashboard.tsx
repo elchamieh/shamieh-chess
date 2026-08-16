@@ -1,3 +1,4 @@
+import Link from "next/link";
 import PortalShell from "./PortalShell";
 import StudentHomeworkSubmissionForm from "./StudentHomeworkSubmissionForm";
 import StudentProfileForm from "./StudentProfileForm";
@@ -13,11 +14,13 @@ function formatDate(value: string) {
   }).format(new Date(value));
 }
 
-function formatFee(amount: number | string | null, currency: string | null) {
+function formatFee(amount: number | string | null, currency: string | null, registrationType?: string) {
   if (amount === null || Number(amount) === 0) return "Free";
   const numericAmount = Number(amount);
-  if (currency === "LBP") return `${new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(numericAmount)} LBP`;
-  return `$${new Intl.NumberFormat("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(numericAmount)}`;
+  const amountLabel = currency === "LBP"
+    ? `${new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(numericAmount)} LBP`
+    : `$${new Intl.NumberFormat("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(numericAmount)}`;
+  return registrationType === "team" ? `${amountLabel} / player` : amountLabel;
 }
 
 export default async function StudentDashboard({ profile }: { profile: any }) {
@@ -32,7 +35,7 @@ export default async function StudentDashboard({ profile }: { profile: any }) {
       .maybeSingle(),
     supabase
       .from("tournaments")
-      .select("id, title, venue, starts_at, registration_deadline, description, fee_amount, fee_currency, open_for_registration, branch:branches(name)")
+      .select("id, title, venue, starts_at, registration_deadline, description, fee_amount, fee_currency, open_for_registration, registration_type, branch:branches(name)")
       .gte("starts_at", new Date().toISOString())
       .order("starts_at", { ascending: true }),
     supabase
@@ -178,6 +181,7 @@ export default async function StudentDashboard({ profile }: { profile: any }) {
           ) : (
             <div className="list">
               {tournaments.map((tournament: any) => {
+                const isTeam = tournament.registration_type === "team";
                 const registration = registrationByTournament.get(tournament.id);
                 const deadlinePassed = tournament.registration_deadline
                   ? new Date(tournament.registration_deadline) < now
@@ -188,19 +192,24 @@ export default async function StudentDashboard({ profile }: { profile: any }) {
                   <div className="card" key={tournament.id} style={{ boxShadow: "none" }}>
                     <div className="row">
                       <div>
-                        <h3 style={{ marginBottom: 6 }}>{tournament.title}</h3>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                          <h3 style={{ marginBottom: 6 }}>{tournament.title}</h3>
+                          {isTeam ? <span className="pill">Team event</span> : null}
+                        </div>
                         <div className="small">
                           {formatDate(tournament.starts_at)}
                           {tournament.branch?.name ? ` · ${tournament.branch.name}` : ""}
                           {tournament.venue ? ` · ${tournament.venue}` : ""}
                         </div>
-                        <div className="small" style={{ marginTop: 4 }}>Fee: {formatFee(tournament.fee_amount, tournament.fee_currency)}</div>
+                        <div className="small" style={{ marginTop: 4 }}>Fee: {formatFee(tournament.fee_amount, tournament.fee_currency, tournament.registration_type)}</div>
                         {tournament.registration_deadline ? (
                           <div className="small" style={{ marginTop: 4 }}>Register by {formatDate(tournament.registration_deadline)}</div>
                         ) : null}
                       </div>
 
-                      {registration ? (
+                      {isTeam && canRegister ? (
+                        <Link className="btn" href={`/tournaments#tournament-${tournament.id}`}>Register team</Link>
+                      ) : registration ? (
                         <span className="pill">{registration.status}</span>
                       ) : canRegister ? (
                         <form action={registerForTournament}>
@@ -211,7 +220,7 @@ export default async function StudentDashboard({ profile }: { profile: any }) {
                         <span className="pill">Registration closed</span>
                       )}
                     </div>
-                    {tournament.description ? <p>{tournament.description}</p> : null}
+                    {tournament.description ? <p style={{ whiteSpace: "pre-line" }}>{tournament.description}</p> : null}
                   </div>
                 );
               })}
