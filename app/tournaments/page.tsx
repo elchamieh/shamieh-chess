@@ -125,7 +125,7 @@ export default async function PublicTournamentsPage({
   const supabase = await createClient();
   const { data: tournaments } = await supabase
     .from("tournaments")
-    .select("id, title, starts_at, registration_deadline, venue, description, fee_amount, fee_currency, open_for_registration, registration_type, branch:branches(name)")
+    .select("id, title, starts_at, registration_deadline, venue, description, fee_amount, fee_currency, open_for_registration, registration_type, chess_results_url, branch:branches(name)")
     .gte("starts_at", new Date().toISOString())
     .order("starts_at", { ascending: true });
 
@@ -180,6 +180,13 @@ export default async function PublicTournamentsPage({
                       <div><span>Entry fee</span><b>{isTeam ? teamFeeLabel(tournament.fee_amount, tournament.fee_currency) : formatFee(tournament.fee_amount, tournament.fee_currency)}</b></div>
                       <div><span>Registration deadline</span><b>{tournament.registration_deadline ? formatDate(tournament.registration_deadline) : "No stated deadline"}</b></div>
                     </div>
+                    {tournament.chess_results_url ? (
+                      <div style={{ marginTop: 16 }}>
+                        <a className="btn secondary" href={tournament.chess_results_url} target="_blank" rel="noopener noreferrer">
+                          {isTeam ? "View registered teams" : "View registered players"} ↗
+                        </a>
+                      </div>
+                    ) : null}
                     {tournament.description ? <p className="public-tournament-description" style={{ whiteSpace: "pre-line" }}>{tournament.description}</p> : null}
                   </div>
 
