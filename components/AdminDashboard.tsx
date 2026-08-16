@@ -83,9 +83,12 @@ export default async function AdminDashboard({ profile }: { profile: any }) {
             <div className="row">
               <div>
                 <b>Tournaments</b>
-                <div className="small">Create events, open or close registration, and view student registrations</div>
+                <div className="small">Create events, manage registrations, and attach official Chess-Results lists</div>
               </div>
-              <Link className="btn" href="/portal/admin/tournaments">Manage</Link>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                <Link className="btn" href="/portal/admin/tournaments">Manage</Link>
+                <Link className="btn secondary" href="/portal/admin/tournament-links">Chess-Results</Link>
+              </div>
             </div>
           </div>
         </div>
