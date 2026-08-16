@@ -48,9 +48,15 @@ function parseFee(formData: FormData) {
   };
 }
 
+function parseRegistrationType(formData: FormData) {
+  return String(formData.get("registration_type") || "individual") === "team" ? "team" : "individual";
+}
+
 function revalidateTournamentPages() {
   revalidatePath("/portal/admin/tournaments");
   revalidatePath("/portal");
+  revalidatePath("/tournaments");
+  revalidatePath("/");
 }
 
 export async function createTournament(formData: FormData) {
@@ -61,6 +67,7 @@ export async function createTournament(formData: FormData) {
   const startsAtRaw = String(formData.get("starts_at") || "").trim();
   const deadlineRaw = String(formData.get("registration_deadline") || "").trim();
   const description = String(formData.get("description") || "").trim() || null;
+  const registration_type = parseRegistrationType(formData);
   const fee = parseFee(formData);
 
   const starts_at = beirutLocalToIso(startsAtRaw);
@@ -87,6 +94,7 @@ export async function createTournament(formData: FormData) {
     description,
     fee_amount: fee.fee_amount,
     fee_currency: fee.fee_currency,
+    registration_type,
     open_for_registration: true,
     created_by: user.id,
   });
@@ -106,6 +114,7 @@ export async function updateTournament(formData: FormData) {
   const startsAtRaw = String(formData.get("starts_at") || "").trim();
   const deadlineRaw = String(formData.get("registration_deadline") || "").trim();
   const description = String(formData.get("description") || "").trim() || null;
+  const registration_type = parseRegistrationType(formData);
   const fee = parseFee(formData);
 
   const starts_at = beirutLocalToIso(startsAtRaw);
@@ -134,6 +143,7 @@ export async function updateTournament(formData: FormData) {
       description,
       fee_amount: fee.fee_amount,
       fee_currency: fee.fee_currency,
+      registration_type,
     })
     .eq("id", tournament_id);
 
