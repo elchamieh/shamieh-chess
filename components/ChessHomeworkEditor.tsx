@@ -2,11 +2,11 @@
 
 import { useMemo, useState } from "react";
 import ChessHomeworkBoard from "./ChessHomeworkBoard";
+import ChessPieceSvg from "./ChessPieceSvg";
 import {
   ChessPiece,
   ChessState,
   EMPTY_FEN,
-  PIECE_GLYPHS,
   STARTING_FEN,
   applyUciMove,
   parseFen,
@@ -14,6 +14,21 @@ import {
 } from "@/lib/chess-homework";
 
 const PALETTE: ChessPiece[] = ["wk", "wq", "wr", "wb", "wn", "wp", "bk", "bq", "br", "bb", "bn", "bp"];
+
+const PIECE_LABELS: Record<ChessPiece, string> = {
+  wk: "White king",
+  wq: "White queen",
+  wr: "White rook",
+  wb: "White bishop",
+  wn: "White knight",
+  wp: "White pawn",
+  bk: "Black king",
+  bq: "Black queen",
+  br: "Black rook",
+  bb: "Black bishop",
+  bn: "Black knight",
+  bp: "Black pawn",
+};
 
 function cloneState(state: ChessState): ChessState {
   return { ...state, board: { ...state.board } };
@@ -190,11 +205,12 @@ export default function ChessHomeworkEditor() {
                     type="button"
                     key={piece}
                     className={`btn ${tool === piece ? "" : "secondary"}`}
-                    title={`Place ${piece}`}
+                    title={`Place ${PIECE_LABELS[piece]}`}
+                    aria-label={`Place ${PIECE_LABELS[piece]}`}
                     onClick={() => { setTool(piece); setSelectedSquare(null); }}
-                    style={{ fontSize: 24, minWidth: 44, padding: "5px 8px" }}
+                    style={{ minWidth: 48, minHeight: 48, padding: 5, display: "inline-flex", alignItems: "center", justifyContent: "center" }}
                   >
-                    {PIECE_GLYPHS[piece]}
+                    <ChessPieceSvg piece={piece} size={34} />
                   </button>
                 ))}
               </div>
