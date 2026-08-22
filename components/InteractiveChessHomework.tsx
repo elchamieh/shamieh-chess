@@ -102,7 +102,7 @@ export default function InteractiveChessHomework({
 
   return (
     <div className="card" style={{ boxShadow: "none", marginTop: 14, background: solved ? "#eef6f0" : undefined }}>
-      <div className="row" style={{ paddingTop: 0, alignItems: "flex-start" }}>
+      <div className="row" style={{ paddingTop: 0, alignItems: "flex-start", flexWrap: "wrap" }}>
         <div>
           <b>Interactive chess position</b>
           <div className="small" style={{ marginTop: 4 }}>
@@ -112,15 +112,17 @@ export default function InteractiveChessHomework({
         <span className="pill">{solved ? "Solved ✓" : "To solve"}</span>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "minmax(280px, 520px) minmax(180px, 1fr)", gap: 16, alignItems: "start" }}>
-        <ChessHomeworkBoard
-          board={state.board}
-          selectedSquare={selectedSquare}
-          flipped={flipped}
-          onSquareClick={handleSquare}
-          disabled={busy || solved}
-        />
-        <div>
+      <div style={{ display: "flex", gap: 16, alignItems: "flex-start", flexWrap: "wrap" }}>
+        <div style={{ flex: "1 1 320px", minWidth: 0, maxWidth: 520 }}>
+          <ChessHomeworkBoard
+            board={state.board}
+            selectedSquare={selectedSquare}
+            flipped={flipped}
+            onSquareClick={handleSquare}
+            disabled={busy || solved}
+          />
+        </div>
+        <div style={{ flex: "1 1 200px", minWidth: 0 }}>
           <p className="small" style={{ marginTop: 0 }}>{message}</p>
           <label className="field">
             <span>Promotion</span>
@@ -131,22 +133,23 @@ export default function InteractiveChessHomework({
               <option value="n">Knight</option>
             </select>
           </label>
-          <button type="button" className="btn secondary" onClick={() => setFlipped((value) => !value)}>Flip board</button>
-          {!solved ? (
-            <button
-              type="button"
-              className="btn secondary"
-              style={{ marginLeft: 8 }}
-              onClick={() => {
-                setState(initialState);
-                setSelectedSquare(null);
-                setStarted(false);
-                setMessage("Position restarted.");
-              }}
-            >
-              Restart
-            </button>
-          ) : null}
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <button type="button" className="btn secondary" onClick={() => setFlipped((value) => !value)}>Flip board</button>
+            {!solved ? (
+              <button
+                type="button"
+                className="btn secondary"
+                onClick={() => {
+                  setState(initialState);
+                  setSelectedSquare(null);
+                  setStarted(false);
+                  setMessage("Position restarted.");
+                }}
+              >
+                Restart
+              </button>
+            ) : null}
+          </div>
         </div>
       </div>
     </div>
