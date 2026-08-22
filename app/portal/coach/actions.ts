@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { HOMEWORK_BUCKET } from "@/lib/homework-files";
+import { applyUciMoves, normalizeSolutionMoves, parseFen } from "@/lib/chess-homework";
+import { hasAdminAccess } from "@/lib/access";
 
 type CreateHomeworkInput = {
   classId: string;
@@ -13,6 +15,8 @@ type CreateHomeworkInput = {
   attachmentPath?: string;
   attachmentName?: string;
   attachmentMimeType?: string;
+  interactivePositionFen?: string;
+  interactiveSolutionMoves?: string[];
 };
 
 export async function createHomework(input: CreateHomeworkInput) {
@@ -22,11 +26,12 @@ export async function createHomework(input: CreateHomeworkInput) {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role, approved")
+    .select("role, approved, frozen, is_admin")
     .eq("id", user.id)
     .single();
 
-  if (!profile?.approved || (profile.role !== "coach" && profile.role !== "admin")) {
+  const adminAccess = hasAdminAccess(profile);
+  if (!profile?.approved || profile.frozen === true || (profile.role !== "coach" && !adminAccess)) {
     return { ok: false, error: "Coach or admin access is required." };
   }
 
@@ -38,19 +43,12 @@ export async function createHomework(input: CreateHomeworkInput) {
   const attachment_path = String(input.attachmentPath || "").trim() || null;
   const attachment_name = String(input.attachmentName || "").trim() || null;
   const attachment_mime_type = String(input.attachmentMimeType || "").trim() || null;
+  const interactive_position_fen = String(input.interactivePositionFen || "").trim() || null;
+  const interactive_solution = normalizeSolutionMoves(input.interactiveSolutionMoves || []);
 
   if (!class_id || !title) return { ok: false, error: "Class and title are required." };
 
-  if (profile.role === "coach") {
-    const { data: assignment } = await supabase
-      .from("coach_class_assignments")
-      .select("class_id")
-      .eq("coach_id", user.id)
-      .eq("class_id", class_id)
-      .maybeSingle();
-
-    if (!assignment) return { ok: false, error: "You are not assigned to this class." };
-  } else {
+  if (adminAccess) {
     const { data: adminClass } = await supabase
       .from("classes")
       .select("id")
@@ -59,28 +57,66 @@ export async function createHomework(input: CreateHomeworkInput) {
       .maybeSingle();
 
     if (!adminClass) return { ok: false, error: "Please choose an active class." };
+  } else {
+    const { data: assignment } = await supabase
+      .from("coach_class_assignments")
+      .select("class_id")
+      .eq("coach_id", user.id)
+      .eq("class_id", class_id)
+      .maybeSingle();
+
+    if (!assignment) return { ok: false, error: "You are not assigned to this class." };
   }
 
   if (attachment_path && !attachment_path.startsWith(`assignments/${class_id}/`)) {
     return { ok: false, error: "Invalid homework file path." };
   }
 
-  const { error } = await supabase.from("homework").insert({
-    class_id,
-    created_by: user.id,
-    title,
-    instructions,
-    attachment_url,
-    attachment_path,
-    attachment_name,
-    attachment_mime_type,
-    due_date,
-    published: true,
-  });
+  if (interactive_position_fen || interactive_solution.length) {
+    if (!interactive_position_fen || !interactive_solution.length) {
+      return { ok: false, error: "Interactive chess homework needs both a position and at least one solution move." };
+    }
+    try {
+      parseFen(interactive_position_fen);
+      applyUciMoves(interactive_position_fen, interactive_solution);
+    } catch (error) {
+      return { ok: false, error: error instanceof Error ? `Chess position/solution error: ${error.message}` : "Invalid chess position or solution." };
+    }
+  }
 
-  if (error) {
+  const { data: created, error } = await supabase
+    .from("homework")
+    .insert({
+      class_id,
+      created_by: user.id,
+      title,
+      instructions,
+      attachment_url,
+      attachment_path,
+      attachment_name,
+      attachment_mime_type,
+      due_date,
+      interactive_position_fen,
+      published: true,
+    })
+    .select("id")
+    .single();
+
+  if (error || !created) {
     if (attachment_path) await supabase.storage.from(HOMEWORK_BUCKET).remove([attachment_path]);
-    return { ok: false, error: error.message };
+    return { ok: false, error: error?.message || "Could not create homework." };
+  }
+
+  if (interactive_position_fen && interactive_solution.length) {
+    const { error: solutionError } = await supabase
+      .from("homework_chess_solutions")
+      .insert({ homework_id: created.id, moves: interactive_solution });
+
+    if (solutionError) {
+      await supabase.from("homework").delete().eq("id", created.id);
+      if (attachment_path) await supabase.storage.from(HOMEWORK_BUCKET).remove([attachment_path]);
+      return { ok: false, error: `Could not save the chess solution: ${solutionError.message}` };
+    }
   }
 
   revalidatePath("/portal");
@@ -95,11 +131,12 @@ export async function deleteHomework(input: { homeworkId: string }) {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role, approved")
+    .select("role, approved, frozen, is_admin")
     .eq("id", user.id)
     .single();
 
-  if (!profile?.approved || (profile.role !== "coach" && profile.role !== "admin")) {
+  const adminAccess = hasAdminAccess(profile);
+  if (!profile?.approved || profile.frozen === true || (profile.role !== "coach" && !adminAccess)) {
     return { ok: false, error: "Coach or admin access is required." };
   }
 
@@ -115,7 +152,7 @@ export async function deleteHomework(input: { homeworkId: string }) {
   if (itemError) return { ok: false, error: itemError.message };
   if (!item) return { ok: false, error: "Homework was not found." };
 
-  if (profile.role === "coach") {
+  if (!adminAccess) {
     if (item.created_by !== user.id) {
       return { ok: false, error: "You can only delete homework that you created." };
     }
