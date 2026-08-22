@@ -160,7 +160,7 @@ export default function ChessHomeworkEditor() {
       <input type="hidden" name="interactive_position_fen" value={setupFen} readOnly />
       <input type="hidden" name="interactive_solution_json" value={JSON.stringify(solutionMoves)} readOnly />
 
-      <div className="row" style={{ paddingTop: 0, alignItems: "flex-start" }}>
+      <div className="row" style={{ paddingTop: 0, alignItems: "flex-start", flexWrap: "wrap" }}>
         <div>
           <h3 style={{ marginBottom: 4 }}>Interactive Chess Position</h3>
           <div className="small">{mode === "setup" ? "1. Build the starting position" : "2. Record the correct solution"}</div>
@@ -168,15 +168,17 @@ export default function ChessHomeworkEditor() {
         <button type="button" className="btn secondary" onClick={() => setEnabled(false)}>Remove position</button>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "minmax(280px, 520px) minmax(220px, 1fr)", gap: 18, alignItems: "start" }}>
-        <ChessHomeworkBoard
-          board={current.board}
-          selectedSquare={selectedSquare}
-          flipped={flipped}
-          onSquareClick={mode === "setup" ? handleSetupSquare : handleSolutionSquare}
-        />
+      <div style={{ display: "flex", gap: 18, alignItems: "flex-start", flexWrap: "wrap" }}>
+        <div style={{ flex: "1 1 320px", minWidth: 0, maxWidth: 520 }}>
+          <ChessHomeworkBoard
+            board={current.board}
+            selectedSquare={selectedSquare}
+            flipped={flipped}
+            onSquareClick={mode === "setup" ? handleSetupSquare : handleSolutionSquare}
+          />
+        </div>
 
-        <div>
+        <div style={{ flex: "1 1 240px", minWidth: 0 }}>
           {mode === "setup" ? (
             <>
               <div className="small" style={{ marginBottom: 6 }}><b>Position tools</b></div>
