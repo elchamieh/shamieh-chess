@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { hasAdminAccess } from "@/lib/access";
 
 export const dynamic = "force-dynamic";
 
@@ -132,11 +133,11 @@ export async function GET(request: Request) {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role, approved, frozen")
+    .select("role, approved, frozen, is_admin")
     .eq("id", user.id)
     .single();
 
-  if (profile?.role !== "admin" || profile.approved !== true || profile.frozen === true) {
+  if (!hasAdminAccess(profile)) {
     return Response.redirect(new URL("/portal", request.url));
   }
 
