@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { hasAdminAccess } from "@/lib/access";
 import AdminDashboard from "@/components/AdminDashboard";
 import CoachDashboard from "@/components/CoachDashboard";
 import StudentDashboard from "@/components/StudentDashboard";
@@ -12,7 +13,7 @@ export default async function PortalPage() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("id, full_name, role, approved, date_of_birth, fide_id, phone, frozen")
+    .select("id, full_name, role, approved, date_of_birth, fide_id, phone, frozen, is_admin")
     .eq("id", user.id)
     .single();
 
@@ -55,7 +56,7 @@ export default async function PortalPage() {
     );
   }
 
-  if (profile.role === "admin") return <AdminDashboard profile={profile} />;
+  if (hasAdminAccess(profile)) return <AdminDashboard profile={profile} />;
   if (profile.role === "coach") return <CoachDashboard profile={profile} />;
   return <StudentDashboard profile={profile} />;
 }

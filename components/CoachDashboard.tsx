@@ -1,3 +1,4 @@
+import Link from "next/link";
 import PortalShell from "./PortalShell";
 import CoachHomeworkForm from "./CoachHomeworkForm";
 import DeleteHomeworkButton from "./DeleteHomeworkButton";
@@ -15,7 +16,13 @@ function formatDateTime(value: string) {
 export default async function CoachDashboard({ profile }: { profile: any }) {
   const supabase = await createClient();
 
-  const [{ data: assignments }, { data: enrollments }, { data: homework }, { data: submissions }] = await Promise.all([
+  const [
+    { data: assignments },
+    { data: enrollments },
+    { data: homework },
+    { data: submissions },
+    { data: chessAttempts },
+  ] = await Promise.all([
     supabase
       .from("coach_class_assignments")
       .select("class_id, class:classes(id, name, branch:branches(name), level:levels(name))")
@@ -26,12 +33,16 @@ export default async function CoachDashboard({ profile }: { profile: any }) {
       .eq("active", true),
     supabase
       .from("homework")
-      .select("id, class_id, title, instructions, attachment_url, attachment_path, attachment_name, due_date, created_at, class:classes(name)")
+      .select("id, class_id, title, instructions, attachment_url, attachment_path, attachment_name, due_date, created_at, interactive_position_fen, class:classes(name)")
       .order("created_at", { ascending: false }),
     supabase
       .from("homework_submissions")
       .select("id, homework_id, student_id, file_path, file_name, submitted_at, student:profiles(id, full_name)")
       .order("submitted_at", { ascending: false }),
+    supabase
+      .from("homework_chess_attempts")
+      .select("homework_id, student_id, solved, mistakes, solved_at, updated_at")
+      .order("updated_at", { ascending: false }),
   ]);
 
   const studentsByClass = new Map<string, any[]>();
@@ -58,6 +69,13 @@ export default async function CoachDashboard({ profile }: { profile: any }) {
     submissionsByHomework.set(submission.homework_id, list);
   }
 
+  const chessAttemptsByHomework = new Map<string, any[]>();
+  for (const attempt of chessAttempts || []) {
+    const list = chessAttemptsByHomework.get(attempt.homework_id) || [];
+    list.push(attempt);
+    chessAttemptsByHomework.set(attempt.homework_id, list);
+  }
+
   const classOptions = (assignments || []).map((assignment: any) => ({
     id: assignment.class_id,
     label: `${assignment.class?.branch?.name || ""} · ${assignment.class?.level?.name || ""} · ${assignment.class?.name || "Class"}`,
@@ -65,6 +83,16 @@ export default async function CoachDashboard({ profile }: { profile: any }) {
 
   return (
     <PortalShell title={`Welcome, Coach ${profile.full_name}`} role="Coach">
+      <div className="nav" style={{ marginBottom: 18, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+        <Link className="btn" href="/portal/coach/attendance">Attendance</Link>
+        {profile.is_admin ? (
+          <>
+            <Link className="btn secondary" href="/portal">Admin dashboard</Link>
+            <span className="pill">Admin + Coach</span>
+          </>
+        ) : null}
+      </div>
+
       <div className="grid">
         <div className="card span8">
           <h2>My Classes</h2>
@@ -104,7 +132,7 @@ export default async function CoachDashboard({ profile }: { profile: any }) {
 
         <div className="card span4">
           <h2>Create Homework</h2>
-          <p className="small">Attach a PDF or Word file for students to download, solve, and submit back.</p>
+          <p className="small">Give homework as a PDF/Word file, a resource link, an interactive chess position, or a combination of them.</p>
           {!classOptions.length ? (
             <p className="small">A class must be assigned before you can create homework.</p>
           ) : (
@@ -113,7 +141,7 @@ export default async function CoachDashboard({ profile }: { profile: any }) {
         </div>
 
         <div className="card span12">
-          <h2>Homework & submissions</h2>
+          <h2>Homework & student work</h2>
           {!homeworkWithDownloads.length ? (
             <p className="small">No homework posted yet.</p>
           ) : (
@@ -121,7 +149,12 @@ export default async function CoachDashboard({ profile }: { profile: any }) {
               {homeworkWithDownloads.map((item: any) => {
                 const students = studentsByClass.get(item.class_id) || [];
                 const itemSubmissions = submissionsByHomework.get(item.id) || [];
+                const itemAttempts = chessAttemptsByHomework.get(item.id) || [];
                 const submissionByStudent = new Map(itemSubmissions.map((submission: any) => [submission.student_id, submission]));
+                const attemptByStudent = new Map(itemAttempts.map((attempt: any) => [attempt.student_id, attempt]));
+                const hasInteractive = Boolean(item.interactive_position_fen);
+                const hasFileWork = Boolean(item.attachment_path || item.attachment_url);
+                const solvedCount = itemAttempts.filter((attempt: any) => attempt.solved).length;
 
                 return (
                   <div className="card" key={item.id} style={{ boxShadow: "none" }}>
@@ -132,7 +165,8 @@ export default async function CoachDashboard({ profile }: { profile: any }) {
                         {item.instructions ? <div style={{ marginTop: 8 }}>{item.instructions}</div> : null}
                       </div>
                       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end", alignItems: "center" }}>
-                        <span className="pill">{itemSubmissions.length}/{students.length} submitted</span>
+                        {hasInteractive ? <span className="pill">{solvedCount}/{students.length} chess solved</span> : null}
+                        {hasFileWork ? <span className="pill">{itemSubmissions.length}/{students.length} files</span> : null}
                         <DeleteHomeworkButton homeworkId={item.id} />
                       </div>
                     </div>
@@ -144,29 +178,42 @@ export default async function CoachDashboard({ profile }: { profile: any }) {
                       {item.attachment_url ? (
                         <a className="btn secondary" href={item.attachment_url} target="_blank" rel="noreferrer">Open resource link</a>
                       ) : null}
+                      {hasInteractive ? <span className="pill">Interactive chess position</span> : null}
                     </div>
 
                     <details style={{ marginTop: 14 }} open>
-                      <summary style={{ cursor: "pointer", fontWeight: 700 }}>Student submissions ({itemSubmissions.length}/{students.length})</summary>
+                      <summary style={{ cursor: "pointer", fontWeight: 700 }}>Student results ({students.length})</summary>
                       {!students.length ? (
                         <div className="small" style={{ marginTop: 8 }}>No active students are currently in this class.</div>
                       ) : (
                         <div className="list" style={{ marginTop: 8 }}>
                           {students.map((student: any) => {
                             const submission: any = submissionByStudent.get(student.id);
+                            const attempt: any = attemptByStudent.get(student.id);
                             return (
-                              <div className="row" key={student.id}>
+                              <div className="row" key={student.id} style={{ alignItems: "flex-start" }}>
                                 <div>
                                   <b>{student.full_name}</b>
-                                  <div className="small">
-                                    {submission ? `Submitted ${formatDateTime(submission.submitted_at)}` : "Not submitted yet"}
-                                  </div>
+                                  {hasInteractive ? (
+                                    <div className="small" style={{ marginTop: 4 }}>
+                                      Chess: {attempt?.solved ? `Solved${attempt.solved_at ? ` ${formatDateTime(attempt.solved_at)}` : ""}` : attempt ? "Started, not solved" : "Not started"}
+                                      {attempt ? ` · ${attempt.mistakes} mistake${attempt.mistakes === 1 ? "" : "s"}` : ""}
+                                    </div>
+                                  ) : null}
+                                  {hasFileWork ? (
+                                    <div className="small" style={{ marginTop: 4 }}>
+                                      File: {submission ? `Submitted ${formatDateTime(submission.submitted_at)}` : "Not submitted yet"}
+                                    </div>
+                                  ) : null}
                                 </div>
-                                {submission?.download_url ? (
-                                  <a className="btn secondary" href={submission.download_url}>Download submission</a>
-                                ) : (
-                                  <span className="pill">Not submitted</span>
-                                )}
+                                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                                  {hasInteractive ? <span className="pill">{attempt?.solved ? "Solved ✓" : "Not solved"}</span> : null}
+                                  {submission?.download_url ? (
+                                    <a className="btn secondary" href={submission.download_url}>Download submission</a>
+                                  ) : hasFileWork ? (
+                                    <span className="pill">No file</span>
+                                  ) : null}
+                                </div>
                               </div>
                             );
                           })}

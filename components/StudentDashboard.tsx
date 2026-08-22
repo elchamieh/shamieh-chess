@@ -2,6 +2,7 @@ import Link from "next/link";
 import PortalShell from "./PortalShell";
 import StudentHomeworkSubmissionForm from "./StudentHomeworkSubmissionForm";
 import StudentProfileForm from "./StudentProfileForm";
+import InteractiveChessHomework from "./InteractiveChessHomework";
 import { createClient } from "@/lib/supabase/server";
 import { createHomeworkDownloadUrl } from "@/lib/homework-files";
 import { registerForTournament } from "@/app/portal/tournaments/actions";
@@ -26,7 +27,13 @@ function formatFee(amount: number | string | null, currency: string | null, regi
 export default async function StudentDashboard({ profile }: { profile: any }) {
   const supabase = await createClient();
 
-  const [{ data: enrollment }, { data: tournaments }, { data: registrations }, { data: homeworkSubmissions }] = await Promise.all([
+  const [
+    { data: enrollment },
+    { data: tournaments },
+    { data: registrations },
+    { data: homeworkSubmissions },
+    { data: chessAttempts },
+  ] = await Promise.all([
     supabase
       .from("student_enrollments")
       .select("class_id, class:classes(id, name, branch:branches(name), level:levels(name))")
@@ -46,6 +53,10 @@ export default async function StudentDashboard({ profile }: { profile: any }) {
       .from("homework_submissions")
       .select("id, homework_id, file_path, file_name, submitted_at, updated_at")
       .eq("student_id", profile.id),
+    supabase
+      .from("homework_chess_attempts")
+      .select("homework_id, solved, mistakes, solved_at, updated_at")
+      .eq("student_id", profile.id),
   ]);
 
   let coaches: any[] = [];
@@ -59,7 +70,7 @@ export default async function StudentDashboard({ profile }: { profile: any }) {
         .eq("class_id", enrollment.class_id),
       supabase
         .from("homework")
-        .select("id, class_id, title, instructions, attachment_url, attachment_path, attachment_name, due_date, created_at")
+        .select("id, class_id, title, instructions, attachment_url, attachment_path, attachment_name, due_date, created_at, interactive_position_fen")
         .eq("class_id", enrollment.class_id)
         .eq("published", true)
         .order("created_at", { ascending: false }),
@@ -81,6 +92,9 @@ export default async function StudentDashboard({ profile }: { profile: any }) {
 
   const submissionByHomework = new Map<string, any>();
   for (const submission of submissionsWithDownloads) submissionByHomework.set(submission.homework_id, submission);
+
+  const chessAttemptByHomework = new Map<string, any>();
+  for (const attempt of chessAttempts || []) chessAttemptByHomework.set(attempt.homework_id, attempt);
 
   const classInfo: any = enrollment?.class;
   const registrationByTournament = new Map<string, any>();
@@ -131,6 +145,9 @@ export default async function StudentDashboard({ profile }: { profile: any }) {
             <div className="list">
               {homeworkWithDownloads.map((item: any) => {
                 const submission = submissionByHomework.get(item.id);
+                const chessAttempt = chessAttemptByHomework.get(item.id);
+                const hasInteractive = Boolean(item.interactive_position_fen);
+                const hasFileWork = Boolean(item.attachment_download_url || item.attachment_url);
                 return (
                   <div className="card" key={item.id} style={{ boxShadow: "none" }}>
                     <div className="row" style={{ alignItems: "flex-start" }}>
@@ -138,7 +155,11 @@ export default async function StudentDashboard({ profile }: { profile: any }) {
                         <h3 style={{ marginBottom: 6 }}>{item.title}</h3>
                         {item.due_date ? <div className="small">Due {item.due_date}</div> : null}
                       </div>
-                      {submission ? <span className="pill">Submitted</span> : <span className="pill">To do</span>}
+                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                        {hasInteractive ? <span className="pill">{chessAttempt?.solved ? "Chess solved ✓" : "Chess to solve"}</span> : null}
+                        {submission ? <span className="pill">File submitted</span> : hasFileWork ? <span className="pill">File to submit</span> : null}
+                        {!hasInteractive && !hasFileWork ? <span className="pill">To do</span> : null}
+                      </div>
                     </div>
 
                     {item.instructions ? <p>{item.instructions}</p> : null}
@@ -155,18 +176,29 @@ export default async function StudentDashboard({ profile }: { profile: any }) {
                       ) : null}
                     </div>
 
+                    {hasInteractive ? (
+                      <InteractiveChessHomework
+                        homeworkId={item.id}
+                        positionFen={item.interactive_position_fen}
+                        alreadySolved={Boolean(chessAttempt?.solved)}
+                        initialMistakes={Number(chessAttempt?.mistakes || 0)}
+                      />
+                    ) : null}
+
                     {submission ? (
                       <div className="small" style={{ marginTop: 10 }}>
                         Submitted {formatDate(submission.submitted_at)} · {submission.file_name}
                       </div>
                     ) : null}
 
-                    <StudentHomeworkSubmissionForm
-                      homeworkId={item.id}
-                      classId={item.class_id}
-                      studentId={profile.id}
-                      existingPath={submission?.file_path || null}
-                    />
+                    {hasFileWork || !hasInteractive ? (
+                      <StudentHomeworkSubmissionForm
+                        homeworkId={item.id}
+                        classId={item.class_id}
+                        studentId={profile.id}
+                        existingPath={submission?.file_path || null}
+                      />
+                    ) : null}
                   </div>
                 );
               })}

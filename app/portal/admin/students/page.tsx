@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import PortalShell from "@/components/PortalShell";
 import AdminStudentAccountActions from "@/components/AdminStudentAccountActions";
 import { createClient } from "@/lib/supabase/server";
+import { hasAdminAccess } from "@/lib/access";
 import { approveStudent, createStudent, moveStudent } from "./actions";
 
 function formatBirthDate(value: string | null) {
@@ -31,10 +32,10 @@ export default async function AdminStudentsPage({
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("full_name, role, approved, frozen")
+    .select("full_name, role, approved, frozen, is_admin")
     .eq("id", user.id)
     .single();
-  if (profile?.role !== "admin" || profile?.approved !== true || profile?.frozen === true) redirect("/portal");
+  if (!hasAdminAccess(profile)) redirect("/portal");
 
   const [studentsResult, pendingResult, classesResult, enrollmentsResult] = await Promise.all([
     supabase.from("profiles").select("id, full_name, date_of_birth, fide_id, phone, created_at, frozen, frozen_at").eq("role", "student").eq("approved", true).order("full_name"),
