@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import PortalShell from "@/components/PortalShell";
 import { createClient } from "@/lib/supabase/server";
+import { hasAdminAccess } from "@/lib/access";
 import { createTournament, deleteTournament, setTournamentRegistration, updateTournament } from "./actions";
 
 function formatDate(value: string) {
@@ -50,10 +51,10 @@ export default async function AdminTournamentsPage({ searchParams }: { searchPar
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role, approved")
+    .select("role, approved, frozen, is_admin")
     .eq("id", user.id)
     .single();
-  if (profile?.role !== "admin" || profile?.approved !== true) redirect("/portal");
+  if (!hasAdminAccess(profile)) redirect("/portal");
 
   const [{ data: branches }, { data: tournaments }, { data: registrations }, { data: teamRegistrations }] = await Promise.all([
     supabase.from("branches").select("id, name").order("name"),
