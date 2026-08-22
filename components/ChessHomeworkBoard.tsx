@@ -1,6 +1,7 @@
 "use client";
 
-import { ChessPiece, FILES, PIECE_GLYPHS, RANKS } from "@/lib/chess-homework";
+import ChessPieceSvg from "./ChessPieceSvg";
+import { ChessPiece, FILES, RANKS } from "@/lib/chess-homework";
 
 export default function ChessHomeworkBoard({
   board,
@@ -29,6 +30,7 @@ export default function ChessHomeworkBoard({
         borderRadius: 8,
         overflow: "hidden",
         background: "#f0d9b5",
+        boxShadow: "0 8px 24px rgba(24,60,45,.12)",
       }}
     >
       {ranks.flatMap((rank) => files.map((file) => {
@@ -49,21 +51,19 @@ export default function ChessHomeworkBoard({
               borderRadius: 0,
               aspectRatio: "1 / 1",
               cursor: disabled ? "default" : "pointer",
-              background: selected ? "#e6bd57" : dark ? "#769656" : "#eeeed2",
-              color: piece?.startsWith("w") ? "#fff" : "#111",
-              textShadow: piece?.startsWith("w") ? "0 1px 2px #111, 0 0 1px #111" : "0 1px 1px #fff",
-              fontSize: "clamp(26px, 7vw, 48px)",
-              lineHeight: 1,
+              background: selected ? "#e6bd57" : dark ? "#78945d" : "#f1ead8",
               padding: 0,
-              fontFamily: "Arial Unicode MS, Segoe UI Symbol, sans-serif",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
             }}
           >
-            {piece ? PIECE_GLYPHS[piece] : ""}
+            {piece ? <ChessPieceSvg piece={piece} /> : null}
             {file === files[0] ? (
-              <span style={{ position: "absolute", top: 3, left: 4, fontSize: 10, color: dark ? "#eef4e8" : "#36563e", textShadow: "none" }}>{rank}</span>
+              <span style={{ position: "absolute", top: 3, left: 4, fontSize: 10, fontWeight: 700, color: dark ? "#f4f1e8" : "#36563e" }}>{rank}</span>
             ) : null}
             {rank === ranks[ranks.length - 1] ? (
-              <span style={{ position: "absolute", bottom: 2, right: 4, fontSize: 10, color: dark ? "#eef4e8" : "#36563e", textShadow: "none" }}>{file}</span>
+              <span style={{ position: "absolute", bottom: 2, right: 4, fontSize: 10, fontWeight: 700, color: dark ? "#f4f1e8" : "#36563e" }}>{file}</span>
             ) : null}
           </button>
         );
