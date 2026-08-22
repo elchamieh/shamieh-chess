@@ -26,7 +26,9 @@ export async function createHomework(input: CreateHomeworkInput) {
     .eq("id", user.id)
     .single();
 
-  if (profile?.role !== "coach" || !profile.approved) return { ok: false, error: "Coach access is required." };
+  if (!profile?.approved || (profile.role !== "coach" && profile.role !== "admin")) {
+    return { ok: false, error: "Coach or admin access is required." };
+  }
 
   const class_id = String(input.classId || "").trim();
   const title = String(input.title || "").trim();
@@ -39,14 +41,25 @@ export async function createHomework(input: CreateHomeworkInput) {
 
   if (!class_id || !title) return { ok: false, error: "Class and title are required." };
 
-  const { data: assignment } = await supabase
-    .from("coach_class_assignments")
-    .select("class_id")
-    .eq("coach_id", user.id)
-    .eq("class_id", class_id)
-    .maybeSingle();
+  if (profile.role === "coach") {
+    const { data: assignment } = await supabase
+      .from("coach_class_assignments")
+      .select("class_id")
+      .eq("coach_id", user.id)
+      .eq("class_id", class_id)
+      .maybeSingle();
 
-  if (!assignment) return { ok: false, error: "You are not assigned to this class." };
+    if (!assignment) return { ok: false, error: "You are not assigned to this class." };
+  } else {
+    const { data: adminClass } = await supabase
+      .from("classes")
+      .select("id")
+      .eq("id", class_id)
+      .eq("active", true)
+      .maybeSingle();
+
+    if (!adminClass) return { ok: false, error: "Please choose an active class." };
+  }
 
   if (attachment_path && !attachment_path.startsWith(`assignments/${class_id}/`)) {
     return { ok: false, error: "Invalid homework file path." };
