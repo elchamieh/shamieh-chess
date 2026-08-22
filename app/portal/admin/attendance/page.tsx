@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import PortalShell from "@/components/PortalShell";
 import { createClient } from "@/lib/supabase/server";
+import { hasAdminAccess } from "@/lib/access";
 import { formatClock, getBeirutIsoDate } from "@/lib/training-schedule";
 
 function validMonth(value?: string) {
@@ -48,11 +49,11 @@ export default async function AdminAttendancePage({
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("id, role, approved")
+    .select("id, role, approved, frozen, is_admin")
     .eq("id", user.id)
     .single();
 
-  if (profile?.role !== "admin" || profile?.approved !== true) redirect("/portal");
+  if (!hasAdminAccess(profile)) redirect("/portal");
 
   const month = validMonth(params.month);
   const today = getBeirutIsoDate();
