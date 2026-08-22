@@ -1,3 +1,4 @@
+import Link from "next/link";
 import PortalShell from "./PortalShell";
 import CoachHomeworkForm from "./CoachHomeworkForm";
 import DeleteHomeworkButton from "./DeleteHomeworkButton";
@@ -65,6 +66,13 @@ export default async function CoachDashboard({ profile }: { profile: any }) {
 
   return (
     <PortalShell title={`Welcome, Coach ${profile.full_name}`} role="Coach">
+      {profile.is_admin ? (
+        <div className="nav" style={{ marginBottom: 18 }}>
+          <Link className="btn secondary" href="/portal">← Admin dashboard</Link>
+          <span className="pill">Admin + Coach</span>
+        </div>
+      ) : null}
+
       <div className="grid">
         <div className="card span8">
           <h2>My Classes</h2>
