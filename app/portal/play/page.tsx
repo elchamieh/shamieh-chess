@@ -16,7 +16,7 @@ export default async function AcademyPlayPage() {
 
   if (!profile || profile.role !== "student" || profile.approved !== true || profile.frozen === true) redirect("/portal");
 
-  const [{ data: players }, { data: challenges }, { data: games }] = await Promise.all([
+  const [{ data: players }, { data: challenges }, { data: liveGames }, { data: myGames }] = await Promise.all([
     supabase
       .from("academy_player_directory")
       .select("user_id, display_name")
@@ -30,20 +30,29 @@ export default async function AcademyPlayPage() {
     supabase
       .from("live_games")
       .select("*")
+      .eq("status", "active")
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("live_games")
+      .select("*")
+      .or(`white_id.eq.${profile.id},black_id.eq.${profile.id}`)
       .order("created_at", { ascending: false })
       .limit(20),
   ]);
 
+  const gamesById = new Map<string, any>();
+  for (const game of [...(liveGames || []), ...(myGames || [])]) gamesById.set(game.id, game);
+
   return (
     <PortalShell title="Academy Play" role="Student">
       <div style={{ marginBottom: 18 }}>
-        <p>See who is online, challenge students from any Shamieh class, and play live games directly on the academy website.</p>
+        <p>See who is online, challenge students from any Shamieh class, play live games, or watch academy games already in progress.</p>
       </div>
       <AcademyPlayLobby
         studentId={profile.id}
         players={(players || []) as any}
         initialChallenges={(challenges || []) as any}
-        initialGames={(games || []) as any}
+        initialGames={[...gamesById.values()] as any}
       />
     </PortalShell>
   );
