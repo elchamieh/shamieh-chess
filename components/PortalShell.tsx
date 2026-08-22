@@ -1,5 +1,6 @@
 import Link from "next/link";
 import AcademyPresenceProvider from "./AcademyPresenceProvider";
+import StudentChallengeNotifier from "./StudentChallengeNotifier";
 import ShamiehLogo from "./ShamiehLogo";
 
 export default function PortalShell({
@@ -29,6 +30,7 @@ export default function PortalShell({
           <span className="pill">{role}</span>
         </div>
       </header>
+      {role === "Student" ? <StudentChallengeNotifier /> : null}
       <section className="page"><h1>{title}</h1>{children}</section>
     </main>
   );
