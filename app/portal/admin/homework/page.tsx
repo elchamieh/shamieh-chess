@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import PortalShell from "@/components/PortalShell";
+import CoachHomeworkForm from "@/components/CoachHomeworkForm";
 import DeleteHomeworkButton from "@/components/DeleteHomeworkButton";
 import { createClient } from "@/lib/supabase/server";
 import { createHomeworkDownloadUrl } from "@/lib/homework-files";
@@ -45,7 +46,7 @@ export default async function AdminHomeworkPage() {
       .eq("active", true),
     supabase
       .from("homework")
-      .select("id, class_id, title, instructions, attachment_url, attachment_path, attachment_name, due_date, created_at, published, class:classes(id, name, branch:branches(name), level:levels(name))")
+      .select("id, class_id, title, instructions, attachment_url, attachment_path, attachment_name, due_date, created_at, published, created_by, class:classes(id, name, branch:branches(name), level:levels(name))")
       .order("created_at", { ascending: false }),
     supabase
       .from("homework_submissions")
@@ -59,6 +60,11 @@ export default async function AdminHomeworkPage() {
     if (enrollment.student) list.push(enrollment.student);
     studentsByClass.set(enrollment.class_id, list);
   }
+
+  const classOptions = (classes || []).map((item: any) => ({
+    id: item.id,
+    label: `${item.branch?.name || ""} · ${item.level?.name || ""} · ${item.name || "Class"}`,
+  }));
 
   const homeworkWithDownloads = await Promise.all((homework || []).map(async (item: any) => ({
     ...item,
@@ -85,8 +91,18 @@ export default async function AdminHomeworkPage() {
 
       <div className="grid">
         <div className="card span5">
+          <h2>Create Homework</h2>
+          <p className="small">Choose any active class and publish homework directly to its students. You can include instructions, a due date, a PDF/Word file, and an optional resource link.</p>
+          {!classOptions.length ? (
+            <p className="small">Create an active class before publishing homework.</p>
+          ) : (
+            <CoachHomeworkForm classes={classOptions} />
+          )}
+        </div>
+
+        <div className="card span7">
           <h2>Classes & students</h2>
-          <p className="small">The same class rosters visible to coaches, shown here across the whole academy.</p>
+          <p className="small">All active class rosters across the academy. Use these rosters to confirm who will receive each assignment.</p>
           {!classes?.length ? (
             <p className="small">No active classes yet.</p>
           ) : (
@@ -115,9 +131,9 @@ export default async function AdminHomeworkPage() {
           )}
         </div>
 
-        <div className="card span7">
+        <div className="card span12">
           <h2>Homework & submissions</h2>
-          <p className="small">See homework published by coaches, download the original files, track submissions, or remove homework when needed.</p>
+          <p className="small">See homework published by admins or coaches, download the original files, track submissions, or remove homework when needed.</p>
           {!homeworkWithDownloads.length ? (
             <p className="small">No homework posted yet.</p>
           ) : (
@@ -126,6 +142,7 @@ export default async function AdminHomeworkPage() {
                 const students = studentsByClass.get(item.class_id) || [];
                 const itemSubmissions = submissionsByHomework.get(item.id) || [];
                 const submissionByStudent = new Map(itemSubmissions.map((submission: any) => [submission.student_id, submission]));
+                const createdByAdmin = item.created_by === user.id;
 
                 return (
                   <div className="card" key={item.id} style={{ boxShadow: "none" }}>
@@ -136,7 +153,7 @@ export default async function AdminHomeworkPage() {
                           {item.class?.branch?.name} · {item.class?.level?.name} · {item.class?.name}
                         </div>
                         <div className="small" style={{ marginTop: 4 }}>
-                          Posted {formatDate(item.created_at)}{item.due_date ? ` · Due ${item.due_date}` : ""}
+                          Posted {formatDate(item.created_at)}{item.due_date ? ` · Due ${item.due_date}` : ""}{createdByAdmin ? " · Created by you" : ""}
                         </div>
                       </div>
                       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end", alignItems: "center" }}>
