@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import PortalShell from "@/components/PortalShell";
 import { createClient } from "@/lib/supabase/server";
+import { hasAdminAccess } from "@/lib/access";
 import { createClass, setClassActive } from "./actions";
 
 export default async function AdminClassesPage() {
@@ -14,11 +15,11 @@ export default async function AdminClassesPage() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("full_name, role")
+    .select("full_name, role, approved, frozen, is_admin")
     .eq("id", user.id)
     .single();
 
-  if (profile?.role !== "admin") redirect("/portal");
+  if (!hasAdminAccess(profile)) redirect("/portal");
 
   const [{ data: branches }, { data: levels }, { data: classes }] = await Promise.all([
     supabase.from("branches").select("id, name").eq("active", true).order("name"),
