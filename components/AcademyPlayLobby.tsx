@@ -43,10 +43,13 @@ export default function AcademyPlayLobby({
   const [message, setMessage] = useState<string | null>(null);
 
   const playerById = useMemo(() => new Map(players.map((player) => [player.user_id, player])), [players]);
-  const activeGame = games.find((game) => game.status === "active");
+  const isMyGame = useCallback((game: LiveGame) => game.white_id === studentId || game.black_id === studentId, [studentId]);
+  const myActiveGame = games.find((game) => game.status === "active" && isMyGame(game));
+  const liveGames = games.filter((game) => game.status === "active");
+  const myGames = games.filter(isMyGame);
 
   const refresh = useCallback(async () => {
-    const [{ data: challengeRows }, { data: gameRows }] = await Promise.all([
+    const [{ data: challengeRows }, { data: liveGameRows }, { data: myGameRows }] = await Promise.all([
       supabase
         .from("live_challenges")
         .select("*")
@@ -56,12 +59,21 @@ export default function AcademyPlayLobby({
       supabase
         .from("live_games")
         .select("*")
+        .eq("status", "active")
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("live_games")
+        .select("*")
+        .or(`white_id.eq.${studentId},black_id.eq.${studentId}`)
         .order("created_at", { ascending: false })
         .limit(20),
     ]);
+
+    const gamesById = new Map<string, LiveGame>();
+    for (const game of [...(liveGameRows || []), ...(myGameRows || [])] as LiveGame[]) gamesById.set(game.id, game);
     setChallenges((challengeRows || []) as LiveChallenge[]);
-    setGames((gameRows || []) as LiveGame[]);
-  }, [supabase]);
+    setGames([...gamesById.values()]);
+  }, [studentId, supabase]);
 
   useEffect(() => {
     const channel = supabase
@@ -144,18 +156,48 @@ export default function AcademyPlayLobby({
     <div className="grid">
       {message ? <div className="card span12"><b>{message}</b></div> : null}
 
-      {activeGame ? (
+      {myActiveGame ? (
         <div className="card span12">
           <div className="row">
             <div>
-              <span className="pill">Game in progress</span>
-              <h2 style={{ marginTop: 10 }}>{activeGame.white_name} vs {activeGame.black_name}</h2>
-              <div className="small">{formatTimeControl(activeGame.initial_seconds, activeGame.increment_seconds)}</div>
+              <span className="pill">Your game in progress</span>
+              <h2 style={{ marginTop: 10 }}>{myActiveGame.white_name} vs {myActiveGame.black_name}</h2>
+              <div className="small">{formatTimeControl(myActiveGame.initial_seconds, myActiveGame.increment_seconds)}</div>
             </div>
-            <Link className="btn" href={`/portal/play/${activeGame.id}`}>Resume game</Link>
+            <Link className="btn" href={`/portal/play/${myActiveGame.id}`}>Resume game</Link>
           </div>
         </div>
       ) : null}
+
+      <div className="card span12">
+        <div className="row" style={{ alignItems: "flex-start" }}>
+          <div>
+            <h2>Games being played</h2>
+            <p className="small">Join any academy game as a spectator. Watching is read-only and does not affect the players or clocks.</p>
+          </div>
+          <span className="pill">{liveGames.length} live</span>
+        </div>
+        {!liveGames.length ? (
+          <p className="small">No academy games are being played right now.</p>
+        ) : (
+          <div className="list">
+            {liveGames.map((game) => {
+              const mine = isMyGame(game);
+              return (
+                <div className="row" key={game.id}>
+                  <div>
+                    <b>{game.white_name} vs {game.black_name}</b>
+                    <div className="small" style={{ marginTop: 3 }}>
+                      {formatTimeControl(game.initial_seconds, game.increment_seconds)} · {(game.moves || []).length} move{(game.moves || []).length === 1 ? "" : "s"} played
+                    </div>
+                  </div>
+                  <Link className={mine ? "btn" : "btn secondary"} href={`/portal/play/${game.id}`}>{mine ? "Resume" : "Watch"}</Link>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
       <div className="card span7">
         <div className="row" style={{ alignItems: "flex-start" }}>
@@ -168,7 +210,7 @@ export default function AcademyPlayLobby({
 
         <label className="field" style={{ maxWidth: 220 }}>
           <span>Time control</span>
-          <select className="input" value={timeControl} onChange={(event) => setTimeControl(event.target.value)} disabled={Boolean(activeGame)}>
+          <select className="input" value={timeControl} onChange={(event) => setTimeControl(event.target.value)} disabled={Boolean(myActiveGame)}>
             {LIVE_TIME_CONTROLS.map((control) => (
               <option key={control.label} value={`${control.initialSeconds}-${control.incrementSeconds}`}>{control.label}</option>
             ))}
@@ -182,15 +224,20 @@ export default function AcademyPlayLobby({
             {onlinePlayers.map((player) => {
               const presence = online[player.user_id];
               const playing = presence?.status === "playing";
+              const watchGameId = playing ? presence?.game_id : null;
               return (
                 <div className="row" key={player.user_id}>
                   <div>
                     <b>{player.display_name}</b>
                     <div className="small" style={{ marginTop: 3 }}>{playing ? "Playing now" : "Online"}</div>
                   </div>
-                  <button className="btn" type="button" disabled={playing || Boolean(activeGame) || busyId === player.user_id} onClick={() => void sendChallenge(player.user_id)}>
-                    {playing ? "Busy" : busyId === player.user_id ? "Sending…" : "Challenge"}
-                  </button>
+                  {watchGameId ? (
+                    <Link className="btn secondary" href={`/portal/play/${watchGameId}`}>Watch</Link>
+                  ) : (
+                    <button className="btn" type="button" disabled={playing || Boolean(myActiveGame) || busyId === player.user_id} onClick={() => void sendChallenge(player.user_id)}>
+                      {playing ? "Busy" : busyId === player.user_id ? "Sending…" : "Challenge"}
+                    </button>
+                  )}
                 </div>
               );
             })}
@@ -206,7 +253,7 @@ export default function AcademyPlayLobby({
             <b>{playerById.get(challenge.challenger_id)?.display_name || "Academy student"}</b>
             <div className="small" style={{ marginTop: 4 }}>{formatTimeControl(challenge.initial_seconds, challenge.increment_seconds)} · expires shortly</div>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
-              <button className="btn" type="button" disabled={busyId === challenge.id || Boolean(activeGame)} onClick={() => void respond(challenge.id, "accept")}>Accept</button>
+              <button className="btn" type="button" disabled={busyId === challenge.id || Boolean(myActiveGame)} onClick={() => void respond(challenge.id, "accept")}>Accept</button>
               <button className="btn secondary" type="button" disabled={busyId === challenge.id} onClick={() => void respond(challenge.id, "decline")}>Decline</button>
             </div>
           </div>
@@ -224,21 +271,26 @@ export default function AcademyPlayLobby({
 
       <div className="card span6">
         <h2>All academy students</h2>
-        <p className="small">You can challenge students from any class. Online students are marked here too.</p>
+        <p className="small">You can challenge students from any class. Students currently playing can be watched live.</p>
         <div className="list" style={{ maxHeight: 430, overflowY: "auto" }}>
           {allOthers.map((player) => {
             const presence = online[player.user_id];
             const isOnline = Boolean(presence);
             const playing = presence?.status === "playing";
+            const watchGameId = playing ? presence?.game_id : null;
             return (
               <div className="row" key={player.user_id}>
                 <div>
                   <b>{player.display_name}</b>
                   <div className="small">{playing ? "● Playing" : isOnline ? "● Online" : "Offline"}</div>
                 </div>
-                <button className="btn secondary" type="button" disabled={Boolean(activeGame) || playing || busyId === player.user_id} onClick={() => void sendChallenge(player.user_id)}>
-                  Challenge
-                </button>
+                {watchGameId ? (
+                  <Link className="btn secondary" href={`/portal/play/${watchGameId}`}>Watch</Link>
+                ) : (
+                  <button className="btn secondary" type="button" disabled={Boolean(myActiveGame) || playing || busyId === player.user_id} onClick={() => void sendChallenge(player.user_id)}>
+                    Challenge
+                  </button>
+                )}
               </div>
             );
           })}
@@ -247,9 +299,9 @@ export default function AcademyPlayLobby({
 
       <div className="card span6">
         <h2>My games</h2>
-        {!games.length ? <p className="small">No academy games played yet.</p> : (
+        {!myGames.length ? <p className="small">No academy games played yet.</p> : (
           <div className="list">
-            {games.map((game) => {
+            {myGames.map((game) => {
               const opponent = game.white_id === studentId ? game.black_name : game.white_name;
               return (
                 <div className="row" key={game.id}>

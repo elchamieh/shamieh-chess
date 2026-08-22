@@ -24,14 +24,15 @@ export default async function LiveGamePage({ params }: { params: Promise<{ gameI
     .maybeSingle();
 
   if (!game) notFound();
-  if (game.white_id !== profile.id && game.black_id !== profile.id) notFound();
+
+  const isParticipant = game.white_id === profile.id || game.black_id === profile.id;
 
   return (
     <PortalShell
       title={`${game.white_name} vs ${game.black_name}`}
       role="Student"
-      studentPresenceStatus={game.status === "active" ? "playing" : "online"}
-      studentPresenceGameId={game.status === "active" ? game.id : null}
+      studentPresenceStatus={isParticipant && game.status === "active" ? "playing" : "online"}
+      studentPresenceGameId={isParticipant && game.status === "active" ? game.id : null}
     >
       <LiveChessGame studentId={profile.id} initialGame={game as any} />
     </PortalShell>

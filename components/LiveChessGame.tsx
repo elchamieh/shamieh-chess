@@ -21,8 +21,10 @@ export default function LiveChessGame({ studentId, initialGame }: { studentId: s
   const refreshedAfterFinish = useRef(initialGame.status === "completed");
 
   const state = useMemo(() => parseFen(game.fen), [game.fen]);
-  const myColor = game.white_id === studentId ? "w" : "b";
-  const myTurn = game.status === "active" && state.turn === myColor;
+  const isParticipant = game.white_id === studentId || game.black_id === studentId;
+  const isSpectator = !isParticipant;
+  const myColor: "w" | "b" | null = game.white_id === studentId ? "w" : game.black_id === studentId ? "b" : null;
+  const myTurn = Boolean(myColor && game.status === "active" && state.turn === myColor);
 
   useEffect(() => {
     const channel = supabase
@@ -74,7 +76,7 @@ export default function LiveChessGame({ studentId, initialGame }: { studentId: s
   }
 
   useEffect(() => {
-    if (game.status !== "active" || timeoutClaimed.current) return;
+    if (!isParticipant || game.status !== "active" || timeoutClaimed.current) return;
     const activeClock = state.turn === "w" ? whiteClock : blackClock;
     if (activeClock > 0) return;
     timeoutClaimed.current = true;
@@ -82,11 +84,11 @@ export default function LiveChessGame({ studentId, initialGame }: { studentId: s
       timeoutClaimed.current = false;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [blackClock, game.id, game.status, state.turn, whiteClock]);
+  }, [blackClock, game.id, game.status, isParticipant, state.turn, whiteClock]);
 
   async function playMove(from: string, to: string) {
     const piece = state.board[from];
-    if (!piece || !myTurn || busy) return;
+    if (!piece || !myTurn || !myColor || busy) return;
     const promotes = piece[1] === "p" && (to[1] === "8" || to[1] === "1");
     const uci = `${from}${to}${promotes ? promotion : ""}`;
     setBusy(true);
@@ -104,7 +106,7 @@ export default function LiveChessGame({ studentId, initialGame }: { studentId: s
   }
 
   function handleSquare(square: string) {
-    if (!myTurn || busy || game.status !== "active") return;
+    if (!myTurn || !myColor || busy || game.status !== "active") return;
     const piece = state.board[square];
 
     if (!selectedSquare) {
@@ -126,7 +128,7 @@ export default function LiveChessGame({ studentId, initialGame }: { studentId: s
   }
 
   async function resign() {
-    if (game.status !== "active" || busy) return;
+    if (!isParticipant || game.status !== "active" || busy) return;
     if (!window.confirm("Resign this game?")) return;
     setBusy(true);
     setMessage(null);
@@ -164,7 +166,7 @@ export default function LiveChessGame({ studentId, initialGame }: { studentId: s
             selectedSquare={selectedSquare}
             flipped={myColor === "b"}
             onSquareClick={handleSquare}
-            disabled={!myTurn || busy || game.status !== "active"}
+            disabled={isSpectator || !myTurn || busy || game.status !== "active"}
           />
 
           <div className="card" style={{ boxShadow: "none", marginTop: 10, padding: 12, background: state.turn === "w" && game.status === "active" ? "#eef6f0" : undefined }}>
@@ -179,25 +181,32 @@ export default function LiveChessGame({ studentId, initialGame }: { studentId: s
       <div className="card span4">
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
           <span className="pill">{formatTimeControl(game.initial_seconds, game.increment_seconds)}</span>
-          <span className="pill">You are {myColor === "w" ? "White" : "Black"}</span>
+          {isSpectator ? <span className="pill">Spectating</span> : <span className="pill">You are {myColor === "w" ? "White" : "Black"}</span>}
         </div>
 
         {game.status === "active" ? (
-          <>
-            <h2>{myTurn ? "Your move" : "Opponent's move"}</h2>
-            <p className="small">Select one of your pieces, then select its destination square. Illegal moves are rejected by the server.</p>
-            <label className="field">
-              <span>Promotion piece</span>
-              <select className="input" value={promotion} onChange={(event) => setPromotion(event.target.value as "q" | "r" | "b" | "n")}> 
-                <option value="q">Queen</option>
-                <option value="r">Rook</option>
-                <option value="b">Bishop</option>
-                <option value="n">Knight</option>
-              </select>
-            </label>
-            {message ? <div className="small" style={{ marginBottom: 12 }}><b>{message}</b></div> : null}
-            <button className="btn secondary" type="button" onClick={() => void resign()} disabled={busy}>Resign</button>
-          </>
+          isSpectator ? (
+            <>
+              <h2>Watching live</h2>
+              <p className="small">You are watching this academy game in real time. The board, clocks, and move list update automatically. Spectators cannot make moves or affect the game.</p>
+            </>
+          ) : (
+            <>
+              <h2>{myTurn ? "Your move" : "Opponent's move"}</h2>
+              <p className="small">Select one of your pieces, then select its destination square. Illegal moves are rejected by the server.</p>
+              <label className="field">
+                <span>Promotion piece</span>
+                <select className="input" value={promotion} onChange={(event) => setPromotion(event.target.value as "q" | "r" | "b" | "n")}>
+                  <option value="q">Queen</option>
+                  <option value="r">Rook</option>
+                  <option value="b">Bishop</option>
+                  <option value="n">Knight</option>
+                </select>
+              </label>
+              {message ? <div className="small" style={{ marginBottom: 12 }}><b>{message}</b></div> : null}
+              <button className="btn secondary" type="button" onClick={() => void resign()} disabled={busy}>Resign</button>
+            </>
+          )
         ) : (
           <>
             <span className="pill">Game finished</span>
