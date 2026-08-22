@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { createHomework } from "@/app/portal/coach/actions";
 import { HOMEWORK_BUCKET, sanitizeFilename, validateAssignmentFile } from "@/lib/homework-files";
+import ChessHomeworkEditor from "./ChessHomeworkEditor";
 
 type ClassOption = {
   id: string;
@@ -15,6 +16,7 @@ export default function CoachHomeworkForm({ classes }: { classes: ClassOption[] 
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [editorKey, setEditorKey] = useState(0);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -26,9 +28,16 @@ export default function CoachHomeworkForm({ classes }: { classes: ClassOption[] 
     const title = String(formData.get("title") || "").trim();
     const fileValue = formData.get("attachment_file");
     const file = fileValue instanceof File && fileValue.size > 0 ? fileValue : null;
+    const interactivePositionFen = String(formData.get("interactive_position_fen") || "").trim();
+    const interactiveSolutionJson = String(formData.get("interactive_solution_json") || "").trim();
 
     if (!classId || !title) {
       setMessage("Class and title are required.");
+      return;
+    }
+
+    if (interactivePositionFen && (!interactiveSolutionJson || interactiveSolutionJson === "[]")) {
+      setMessage("Record at least one correct move for the interactive chess position.");
       return;
     }
 
@@ -56,6 +65,16 @@ export default function CoachHomeworkForm({ classes }: { classes: ClassOption[] 
         if (uploadError) throw new Error(uploadError.message);
       }
 
+      let solutionMoves: string[] = [];
+      if (interactiveSolutionJson) {
+        try {
+          const parsed = JSON.parse(interactiveSolutionJson);
+          solutionMoves = Array.isArray(parsed) ? parsed.map(String) : [];
+        } catch {
+          throw new Error("The interactive chess solution could not be read.");
+        }
+      }
+
       const result = await createHomework({
         classId,
         title,
@@ -65,6 +84,8 @@ export default function CoachHomeworkForm({ classes }: { classes: ClassOption[] 
         attachmentPath,
         attachmentName: file?.name,
         attachmentMimeType: file?.type,
+        interactivePositionFen: interactivePositionFen || undefined,
+        interactiveSolutionMoves: solutionMoves,
       });
 
       if (!result.ok) {
@@ -73,6 +94,7 @@ export default function CoachHomeworkForm({ classes }: { classes: ClassOption[] 
       }
 
       form.reset();
+      setEditorKey((value) => value + 1);
       setMessage("Homework published.");
       router.refresh();
     } catch (error) {
@@ -112,6 +134,9 @@ export default function CoachHomeworkForm({ classes }: { classes: ClassOption[] 
         <span>Resource link</span>
         <input className="input" name="attachment_url" type="url" placeholder="Optional https://..." />
       </label>
+
+      <ChessHomeworkEditor key={editorKey} />
+
       {message ? <div className="small" style={{ margin: "10px 0" }}>{message}</div> : null}
       <button className="btn" type="submit" disabled={busy}>{busy ? "Working…" : "Publish homework"}</button>
     </form>
