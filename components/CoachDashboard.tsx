@@ -83,12 +83,15 @@ export default async function CoachDashboard({ profile }: { profile: any }) {
 
   return (
     <PortalShell title={`Welcome, Coach ${profile.full_name}`} role="Coach">
-      {profile.is_admin ? (
-        <div className="nav" style={{ marginBottom: 18 }}>
-          <Link className="btn secondary" href="/portal">← Admin dashboard</Link>
-          <span className="pill">Admin + Coach</span>
-        </div>
-      ) : null}
+      <div className="nav" style={{ marginBottom: 18, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+        <Link className="btn" href="/portal/coach/attendance">Attendance</Link>
+        {profile.is_admin ? (
+          <>
+            <Link className="btn secondary" href="/portal">Admin dashboard</Link>
+            <span className="pill">Admin + Coach</span>
+          </>
+        ) : null}
+      </div>
 
       <div className="grid">
         <div className="card span8">
