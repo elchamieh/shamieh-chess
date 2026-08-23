@@ -15,10 +15,10 @@ async function getPost(slug: string) {
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
   const { supabase, post } = await getPost(slug);
-  if (!post) return { title: "News | Shamieh Chess Academy" };
+  if (!post) return { title: "News" };
   const imageUrl = newsImageUrl(supabase, post.image_path);
   return {
-    title: `${post.title} | Shamieh Chess Academy`,
+    title: post.title,
     description: post.summary,
     alternates: { canonical: `https://www.shamiehchess.com/news/${post.slug}` },
     openGraph: {
@@ -40,7 +40,7 @@ export default async function NewsDetailPage({ params }: { params: Promise<{ slu
   return (
     <main className="news-site">
       <header className="news-header">
-        <Link href="/" aria-label="Shamieh Chess home"><ShamiehLogo /></Link>
+        <ShamiehLogo />
         <nav className="news-nav" aria-label="News navigation">
           <Link href="/">Home</Link>
           <Link href="/news">All News</Link>
