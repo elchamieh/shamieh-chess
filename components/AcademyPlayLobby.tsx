@@ -39,6 +39,9 @@ export default function AcademyPlayLobby({
   const [challenges, setChallenges] = useState(initialChallenges);
   const [games, setGames] = useState(initialGames);
   const [timeControl, setTimeControl] = useState("300-3");
+  const [customizingTime, setCustomizingTime] = useState(false);
+  const [customMinutes, setCustomMinutes] = useState("15");
+  const [customIncrement, setCustomIncrement] = useState("10");
   const [busyId, setBusyId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -98,13 +101,39 @@ export default function AcademyPlayLobby({
     return data;
   }
 
-  async function sendChallenge(opponentId: string) {
+  function selectedTimeControl() {
+    if (customizingTime) {
+      const minutes = Number(customMinutes);
+      const increment = Number(customIncrement);
+      if (!Number.isInteger(minutes) || minutes < 1 || minutes > 60) {
+        setMessage("Custom starting time must be a whole number from 1 to 60 minutes.");
+        return null;
+      }
+      if (!Number.isInteger(increment) || increment < 0 || increment > 60) {
+        setMessage("Custom increment must be a whole number from 0 to 60 seconds.");
+        return null;
+      }
+      return { initial: minutes * 60, increment };
+    }
+
     const [initial, increment] = timeControl.split("-").map(Number);
-    setBusyId(opponentId);
+    return { initial, increment };
+  }
+
+  async function sendChallenge(opponentId: string) {
     setMessage(null);
+    const selected = selectedTimeControl();
+    if (!selected) return;
+
+    setBusyId(opponentId);
     try {
-      await invoke({ action: "challenge", opponent_id: opponentId, initial_seconds: initial, increment_seconds: increment });
-      setMessage("Challenge sent.");
+      await invoke({
+        action: "challenge",
+        opponent_id: opponentId,
+        initial_seconds: selected.initial,
+        increment_seconds: selected.increment,
+      });
+      setMessage(`Challenge sent · ${formatTimeControl(selected.initial, selected.increment)}.`);
       await refresh();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Could not send challenge.");
@@ -208,14 +237,74 @@ export default function AcademyPlayLobby({
           <span className="pill">{connected ? `${onlinePlayers.length} online` : "Connecting…"}</span>
         </div>
 
-        <label className="field" style={{ maxWidth: 220 }}>
-          <span>Time control</span>
-          <select className="input" value={timeControl} onChange={(event) => setTimeControl(event.target.value)} disabled={Boolean(myActiveGame)}>
-            {LIVE_TIME_CONTROLS.map((control) => (
-              <option key={control.label} value={`${control.initialSeconds}-${control.incrementSeconds}`}>{control.label}</option>
-            ))}
-          </select>
-        </label>
+        <div style={{ display: "flex", gap: 10, alignItems: "flex-end", flexWrap: "wrap" }}>
+          <label className="field" style={{ maxWidth: 220, flex: "1 1 180px" }}>
+            <span>Time control</span>
+            <select
+              className="input"
+              value={timeControl}
+              onChange={(event) => {
+                setTimeControl(event.target.value);
+                setCustomizingTime(false);
+              }}
+              disabled={Boolean(myActiveGame) || customizingTime}
+            >
+              {LIVE_TIME_CONTROLS.map((control) => (
+                <option key={control.label} value={`${control.initialSeconds}-${control.incrementSeconds}`}>{control.label}</option>
+              ))}
+            </select>
+          </label>
+          <button
+            className="btn secondary"
+            type="button"
+            disabled={Boolean(myActiveGame)}
+            onClick={() => {
+              setMessage(null);
+              setCustomizingTime((current) => !current);
+            }}
+            style={{ marginBottom: 14 }}
+          >
+            {customizingTime ? "Use presets" : "Customize"}
+          </button>
+        </div>
+
+        {customizingTime ? (
+          <div className="card" style={{ boxShadow: "none", padding: 12, marginBottom: 14 }}>
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+              <label className="field" style={{ flex: "1 1 145px", marginBottom: 0 }}>
+                <span>Starting minutes</span>
+                <input
+                  className="input"
+                  type="number"
+                  min={1}
+                  max={60}
+                  step={1}
+                  inputMode="numeric"
+                  value={customMinutes}
+                  onChange={(event) => setCustomMinutes(event.target.value)}
+                  disabled={Boolean(myActiveGame)}
+                />
+              </label>
+              <label className="field" style={{ flex: "1 1 145px", marginBottom: 0 }}>
+                <span>Increment (seconds)</span>
+                <input
+                  className="input"
+                  type="number"
+                  min={0}
+                  max={60}
+                  step={1}
+                  inputMode="numeric"
+                  value={customIncrement}
+                  onChange={(event) => setCustomIncrement(event.target.value)}
+                  disabled={Boolean(myActiveGame)}
+                />
+              </label>
+            </div>
+            <div className="small" style={{ marginTop: 8 }}>
+              Custom games can use 1–60 minutes with a 0–60 second increment.
+            </div>
+          </div>
+        ) : null}
 
         {!onlinePlayers.length ? (
           <p className="small">No other academy students are online right now.</p>
