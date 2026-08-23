@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { hasAdminAccess } from "@/lib/access";
 import { NEWS_CATEGORIES, NewsPost, formatNewsDate, newsImageUrl } from "@/lib/news";
 import { createNewsPost, deleteNewsPost, updateNewsPost } from "./actions";
+import NewsPostForm from "./NewsPostForm";
 
 function dateInput(value: string | null) {
   return value ? value.slice(0, 10) : "";
@@ -51,12 +52,12 @@ export default async function AdminNewsPage({
           <h2 style={{ marginTop: 12 }}>Publish a highlight</h2>
           <p className="small">Use this for international participation, achievements, academy events, tournament news, or special posts. Published stories can appear on the homepage and in the News archive.</p>
 
-          <form action={createNewsPost} style={{ marginTop: 18 }}>
+          <NewsPostForm action={createNewsPost} style={{ marginTop: 18 }}>
             <label className="field"><span>Title</span><input className="input" name="title" required maxLength={180} placeholder="Shamieh Chess in Cappadocia 2026" /></label>
             <label className="field"><span>Short summary</span><textarea className="input" name="summary" required maxLength={500} rows={3} placeholder="A short introduction shown on the homepage and news cards." /></label>
             <label className="field"><span>Full story / post text</span><textarea className="input" name="body" rows={8} placeholder="Write the full story here. Line breaks will be preserved." /></label>
             <label className="field"><span>Category</span><select className="input" name="category" defaultValue="Academy News">{NEWS_CATEGORIES.map((category) => <option key={category}>{category}</option>)}</select></label>
-            <label className="field"><span>Main image</span><input className="input" type="file" name="image" accept="image/jpeg,image/png,image/webp" /><small>JPG, PNG or WebP · maximum 8 MB</small></label>
+            <label className="field"><span>Main image</span><input className="input" type="file" name="image" accept="image/jpeg,image/png,image/webp" /><small>JPG, PNG or WebP · maximum 8 MB · uploads directly before the post is saved</small></label>
             <label className="field"><span>Image description (optional)</span><input className="input" name="image_alt" maxLength={240} placeholder="Players and coach representing Shamieh Chess in Turkey" /></label>
             <label className="field"><span>External link (optional)</span><input className="input" type="url" name="external_url" placeholder="https://www.facebook.com/..." /><small>Useful for Facebook, Instagram, Chess-Results, or another official source.</small></label>
             <div className="grid" style={{ gap: 12 }}>
@@ -67,7 +68,7 @@ export default async function AdminNewsPage({
             <label style={{ display: "flex", gap: 9, alignItems: "center", margin: "14px 0" }}><input type="checkbox" name="featured" /> <b>Featured on homepage</b></label>
             <label style={{ display: "flex", gap: 9, alignItems: "center", margin: "14px 0 18px" }}><input type="checkbox" name="published" /> <b>Publish now</b></label>
             <button className="btn" type="submit">Create news post</button>
-          </form>
+          </NewsPostForm>
         </div>
 
         <div className="card span7">
@@ -97,13 +98,13 @@ export default async function AdminNewsPage({
 
                     {imageUrl ? <img src={imageUrl} alt={post.image_alt || post.title} style={{ width: "100%", maxHeight: 220, objectFit: "cover", borderRadius: 14, marginTop: 14 }} /> : null}
 
-                    <form action={updateNewsPost} style={{ marginTop: 16 }}>
+                    <NewsPostForm action={updateNewsPost} style={{ marginTop: 16 }}>
                       <input type="hidden" name="id" value={post.id} />
                       <label className="field"><span>Title</span><input className="input" name="title" defaultValue={post.title} required maxLength={180} /></label>
                       <label className="field"><span>Short summary</span><textarea className="input" name="summary" defaultValue={post.summary} required maxLength={500} rows={3} /></label>
                       <label className="field"><span>Full story / post text</span><textarea className="input" name="body" defaultValue={post.body} rows={7} /></label>
                       <label className="field"><span>Category</span><select className="input" name="category" defaultValue={post.category}>{NEWS_CATEGORIES.map((category) => <option key={category}>{category}</option>)}</select></label>
-                      <label className="field"><span>Replace image</span><input className="input" type="file" name="image" accept="image/jpeg,image/png,image/webp" /></label>
+                      <label className="field"><span>Replace image</span><input className="input" type="file" name="image" accept="image/jpeg,image/png,image/webp" /><small>JPG, PNG or WebP · maximum 8 MB</small></label>
                       {post.image_path ? <label style={{ display: "flex", gap: 8, alignItems: "center", margin: "0 0 12px" }}><input type="checkbox" name="remove_image" /> Remove current image</label> : null}
                       <label className="field"><span>Image description</span><input className="input" name="image_alt" defaultValue={post.image_alt} maxLength={240} /></label>
                       <label className="field"><span>External link</span><input className="input" type="url" name="external_url" defaultValue={post.external_url || ""} /></label>
@@ -115,7 +116,7 @@ export default async function AdminNewsPage({
                       <label style={{ display: "flex", gap: 9, alignItems: "center", margin: "14px 0" }}><input type="checkbox" name="featured" defaultChecked={post.featured} /> <b>Featured on homepage</b></label>
                       <label style={{ display: "flex", gap: 9, alignItems: "center", margin: "14px 0 18px" }}><input type="checkbox" name="published" defaultChecked={post.published} /> <b>Published</b></label>
                       <button className="btn" type="submit">Save changes</button>
-                    </form>
+                    </NewsPostForm>
 
                     <form action={deleteNewsPost} style={{ marginTop: 10 }}>
                       <input type="hidden" name="id" value={post.id} />
