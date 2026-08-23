@@ -52,6 +52,7 @@ export const LIVE_TIME_CONTROLS = [
   { initialSeconds: 300, incrementSeconds: 3, label: "5 + 3" },
   { initialSeconds: 600, incrementSeconds: 0, label: "10 + 0" },
   { initialSeconds: 600, incrementSeconds: 5, label: "10 + 5" },
+  { initialSeconds: 1800, incrementSeconds: 10, label: "30 + 10" },
 ] as const;
 
 export function formatTimeControl(initialSeconds: number, incrementSeconds: number) {
