@@ -13,8 +13,14 @@ const APP_ONLY_PATHS = [
   "/auth/callback",
 ];
 
+const PUBLIC_ONLY_PATHS = ["/tournaments", "/news"];
+
 function isAppOnlyPath(pathname: string) {
   return APP_ONLY_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));
+}
+
+function isPublicOnlyPath(pathname: string) {
+  return PUBLIC_ONLY_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));
 }
 
 function noIndexResponse() {
@@ -41,7 +47,7 @@ export function middleware(request: NextRequest) {
       return NextResponse.redirect(`https://${APP_HOST}/login`);
     }
 
-    if (pathname === "/tournaments" || pathname.startsWith("/tournaments/")) {
+    if (isPublicOnlyPath(pathname)) {
       return NextResponse.redirect(`https://${PUBLIC_HOST}${pathname}${search}`);
     }
 

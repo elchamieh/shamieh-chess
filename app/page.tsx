@@ -3,6 +3,7 @@ import ShamiehLogo from "@/components/ShamiehLogo";
 import PublicTrainingSchedule from "@/components/PublicTrainingSchedule";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentMonthBounds } from "@/lib/training-schedule";
+import { NewsPost, formatNewsDate, newsImageUrl } from "@/lib/news";
 import "./public-home.css";
 
 function formatDate(value: string) {
@@ -30,7 +31,7 @@ const levels = [
 export default async function HomePage() {
   const supabase = await createClient();
   const { first: monthStart, last: monthEnd } = getCurrentMonthBounds();
-  const [{ data: tournaments }, { data: trainingSessions }] = await Promise.all([
+  const [{ data: tournaments }, { data: trainingSessions }, { data: newsRows }] = await Promise.all([
     supabase
       .from("tournaments")
       .select("id, title, starts_at, registration_deadline, venue, description, fee_amount, fee_currency, open_for_registration, branch:branches(name)")
@@ -45,7 +46,17 @@ export default async function HomePage() {
       .lte("session_date", monthEnd)
       .order("session_date", { ascending: true })
       .order("start_time", { ascending: true }),
+    supabase
+      .from("news_posts")
+      .select("*")
+      .order("featured", { ascending: false })
+      .order("display_order", { ascending: false })
+      .order("published_at", { ascending: false })
+      .limit(4),
   ]);
+  const newsPosts = (newsRows || []) as NewsPost[];
+  const featuredNews = newsPosts[0] || null;
+  const otherNews = newsPosts.slice(1);
 
   return (
     <main className="public-site">
@@ -55,6 +66,7 @@ export default async function HomePage() {
           <a href="#academy">Academy</a>
           <a href="#locations">Saida & Beirut</a>
           <a href="#schedule">Schedule</a>
+          <Link href="/news">News</Link>
           <Link href="/tournaments">Tournaments</Link>
           <Link href="/register" className="btn public-header-join">Join Academy</Link>
           <Link href="/login" className="btn secondary">Student Login</Link>
@@ -83,6 +95,51 @@ export default async function HomePage() {
           <figcaption>Learn in class. Test your game over the board.</figcaption>
         </figure>
       </section>
+
+      {featuredNews ? (
+        <section className="public-section public-news-section" id="news">
+          <div className="public-news-heading">
+            <div>
+              <span className="public-eyebrow">SHAMIEH NEWS & HIGHLIGHTS</span>
+              <h2>From the academy and beyond.</h2>
+              <p>International participation, player achievements, important academy moments, and special stories.</p>
+            </div>
+            <Link className="btn secondary" href="/news">See all news</Link>
+          </div>
+          <div className="public-news-layout">
+            <article className="public-news-featured">
+              {newsImageUrl(supabase, featuredNews.image_path) ? (
+                <Link className="public-news-featured-media" href={`/news/${featuredNews.slug}`}>
+                  <img src={newsImageUrl(supabase, featuredNews.image_path)!} alt={featuredNews.image_alt || featuredNews.title} loading="lazy" />
+                </Link>
+              ) : <Link className="public-news-featured-media public-news-placeholder" href={`/news/${featuredNews.slug}`}>♞</Link>}
+              <div className="public-news-featured-copy">
+                <div className="public-news-meta"><span>{featuredNews.category}</span><span>{formatNewsDate(featuredNews)}</span>{featuredNews.featured ? <span>Featured</span> : null}</div>
+                <h3>{featuredNews.title}</h3>
+                <p>{featuredNews.summary}</p>
+                <Link className="public-card-link" href={`/news/${featuredNews.slug}`}>Read story →</Link>
+              </div>
+            </article>
+            <div className="public-news-list">
+              {otherNews.map((post) => {
+                const imageUrl = newsImageUrl(supabase, post.image_path);
+                return (
+                  <article className="public-news-small" key={post.id}>
+                    {imageUrl ? <Link className="public-news-small-media" href={`/news/${post.slug}`}><img src={imageUrl} alt={post.image_alt || post.title} loading="lazy" /></Link> : null}
+                    <div>
+                      <div className="public-news-meta"><span>{post.category}</span><span>{formatNewsDate(post)}</span></div>
+                      <h3>{post.title}</h3>
+                      <p>{post.summary}</p>
+                      <Link className="public-card-link" href={`/news/${post.slug}`}>Read →</Link>
+                    </div>
+                  </article>
+                );
+              })}
+              {!otherNews.length ? <div className="public-news-empty">More Shamieh Chess stories will appear here as they are published.</div> : null}
+            </div>
+          </div>
+        </section>
+      ) : null}
 
       <section className="public-section public-academy-story" id="academy">
         <div className="public-story-media">
@@ -178,7 +235,7 @@ export default async function HomePage() {
 
       <footer className="public-footer">
         <div><ShamiehLogo /></div><div>Shamieh Chess Academy · Saida & Beirut</div>
-        <div className="public-footer-links"><a href="https://www.facebook.com/shamieh.chess.academy" target="_blank" rel="noreferrer">Facebook</a><Link href="/login">Student Login</Link><Link href="/tournaments">Tournaments</Link></div>
+        <div className="public-footer-links"><a href="https://www.facebook.com/shamieh.chess.academy" target="_blank" rel="noreferrer">Facebook</a><Link href="/news">News</Link><Link href="/login">Student Login</Link><Link href="/tournaments">Tournaments</Link></div>
       </footer>
     </main>
   );
