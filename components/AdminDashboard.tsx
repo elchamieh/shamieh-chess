@@ -89,6 +89,13 @@ export default async function AdminDashboard({ profile }: { profile: any }) {
             </div>
             <div className="row">
               <div>
+                <b>News & Highlights</b>
+                <div className="small">Publish international participation, achievements, special posts, and featured homepage stories</div>
+              </div>
+              <Link className="btn" href="/portal/admin/news">Manage</Link>
+            </div>
+            <div className="row">
+              <div>
                 <b>Tournaments</b>
                 <div className="small">Create events, manage registrations, and attach official Chess-Results lists</div>
               </div>
