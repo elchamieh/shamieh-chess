@@ -9,6 +9,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 1,
     },
     {
+      url: `${base}/news`,
+      changeFrequency: "daily",
+      priority: 0.9,
+    },
+    {
       url: `${base}/tournaments`,
       changeFrequency: "daily",
       priority: 0.9,
