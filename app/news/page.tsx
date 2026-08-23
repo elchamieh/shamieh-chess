@@ -6,9 +6,15 @@ import { NewsPost, formatNewsDate, newsImageUrl } from "@/lib/news";
 import "./news.css";
 
 export const metadata: Metadata = {
-  title: "News & Highlights | Shamieh Chess Academy",
+  title: "News & Highlights",
   description: "International participation, player achievements, tournaments, academy news, and special highlights from Shamieh Chess Academy.",
   alternates: { canonical: "https://www.shamiehchess.com/news" },
+  openGraph: {
+    title: "News & Highlights | Shamieh Chess Academy",
+    description: "International participation, player achievements, tournaments, academy news, and special highlights from Shamieh Chess Academy.",
+    url: "https://www.shamiehchess.com/news",
+    type: "website",
+  },
 };
 
 export default async function NewsPage() {
@@ -24,7 +30,7 @@ export default async function NewsPage() {
   return (
     <main className="news-site">
       <header className="news-header">
-        <Link href="/" aria-label="Shamieh Chess home"><ShamiehLogo /></Link>
+        <ShamiehLogo />
         <nav className="news-nav" aria-label="News navigation">
           <Link href="/">Home</Link>
           <Link href="/tournaments">Tournaments</Link>
