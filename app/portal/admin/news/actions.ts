@@ -38,6 +38,10 @@ function isHttpsUrl(value: string) {
   }
 }
 
+function isManagedImagePath(value: string) {
+  return /^posts\/[0-9a-f-]{36}\.(jpg|png|webp)$/.test(value);
+}
+
 function slugify(value: string) {
   return value
     .toLowerCase()
@@ -82,6 +86,15 @@ async function uploadImage(supabase: any, entry: FormDataEntryValue | null) {
   return path;
 }
 
+async function resolveUploadedImage(supabase: any, formData: FormData) {
+  const directPath = cleanText(formData.get("uploaded_image_path"));
+  if (directPath) {
+    if (!isManagedImagePath(directPath)) throw new Error("Invalid uploaded image path.");
+    return directPath;
+  }
+  return uploadImage(supabase, formData.get("image"));
+}
+
 async function makeUniqueSlug(supabase: any, title: string) {
   const base = slugify(title);
   const { data } = await supabase.from("news_posts").select("id").eq("slug", base).maybeSingle();
@@ -119,7 +132,7 @@ export async function createNewsPost(formData: FormData) {
 
   let imagePath: string | null = null;
   try {
-    imagePath = await uploadImage(supabase, formData.get("image"));
+    imagePath = await resolveUploadedImage(supabase, formData);
   } catch (error) {
     fail(error instanceof Error ? error.message : "Could not upload image.");
   }
@@ -186,7 +199,7 @@ export async function updateNewsPost(formData: FormData) {
   let nextImagePath: string | null = removeImage ? null : existing.image_path;
   let uploadedPath: string | null = null;
   try {
-    uploadedPath = await uploadImage(supabase, formData.get("image"));
+    uploadedPath = await resolveUploadedImage(supabase, formData);
     if (uploadedPath) nextImagePath = uploadedPath;
   } catch (error) {
     fail(error instanceof Error ? error.message : "Could not upload image.");
